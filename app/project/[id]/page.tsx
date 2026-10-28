@@ -1,0 +1,13 @@
+import Link from 'next/link';
+import { ArrowLeft, BookOpen, CircuitBoard, ExternalLink, Play, Users } from 'lucide-react';
+import { defaultProjects, getProject } from '../../../lib/project-data';
+import QrCard from '../../components/QrCard';
+
+export function generateStaticParams() { return defaultProjects.map(project => ({ id: project.id })); }
+
+export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const project = getProject(decodeURIComponent(params.id));
+  if (!project) return <main className="public-page"><div className="public-card"><h1>Project not found</h1><p>This QR code does not match a Circux project.</p><Link href="/">Back to Circux</Link></div></main>;
+  const details = project.details!;
+  return <main className="public-page"><div className="public-wrap"><Link href="/" className="back-link"><ArrowLeft size={14} /> Circux OS</Link><section className="public-card detail-hero"><div><div className="eyebrow">{project.category} · {project.id}</div><h1>{project.name}</h1><p>{project.summary}</p><div className="actions"><span className="badge green">{project.team}</span><span className="badge blue">{project.status}</span></div></div><QrCard id={project.id} /></section><div className="detail-grid"><section className="public-card"><div className="card-head"><h2><Users size={17} /> Team members</h2></div>{details.members.map(member => <div className="kpi" key={member.name}><span>{member.name}</span><span className="muted">{member.role}</span></div>)}</section><section className="public-card"><div className="card-head"><h2><CircuitBoard size={17} /> Live readings</h2><span className="badge amber">SIMULATED</span></div>{details.readings.map(reading => <div className="reading" key={reading.label}><div><strong>{reading.label}</strong><small>{reading.note}</small></div><b>{reading.value}</b></div>)}</section></div><div className="detail-grid"><section className="public-card"><div className="card-head"><h2><BookOpen size={17} /> Documentation</h2></div>{details.documents.map(document => <div className="document" key={document}>{document}<span>Read sample →</span></div>)}<h2 className="section-title">Circuit overview</h2><p>{details.circuit}</p></section><section className="public-card"><div className="card-head"><h2><Play size={17} /> Development video</h2></div><div className="video-placeholder"><Play size={28} /><span>Project build walkthrough</span></div><a className="video-link" href={details.video} target="_blank" rel="noreferrer">Open sample video <ExternalLink size={13} /></a></section></div><Link className="display-link" href={`/display/${project.id}`}>Open judge display for this project →</Link></div></main>;
+}
