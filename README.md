@@ -1,120 +1,132 @@
-## ◈ Circux OS
+<div align="center">
 
-The Operating Workspace for STEM & Robotics
+# ◈ CIRCUX OS
 
-Circux OS is a modern web-based platform designed to transform how robotics projects are managed, presented, and evaluated. From interactive project showcases and QR-powered access to live exhibition displays and judging workflows, Circux OS brings essential STEM exhibition tools into one unified workspace.
+### The Operating Workspace for STEM & Robotics
 
-Built with: Next.js · React · TypeScript · Tailwind CSS
+**Build. Showcase. Evaluate.**
 
-Key Features
+A modern workspace for organizing robotics projects, presenting student innovations, and managing STEM exhibitions — from project documentation to QR-powered display workflows.
 
-- ◈ Centralized Project Management
-- ◈ Interactive STEM Showcases
-- ◈ QR-Based Project Access
-- ◈ Mobile-to-Display Pairing
-- ◈ Dual-Project Presentation
-- ◈ Judging & Score Management
-- ◈ Sensor Telemetry Demonstrations
+<p>
+  <a href="https://circux-os.vercel.app/"><strong>↗ Launch Live Demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/yeshwanthkumardomala/circux-os"><strong>Explore the Source</strong></a>
+</p>
 
-Designed for students, educators, robotics labs, and science exhibitions, Circux OS provides a foundation for connected STEM experiences, with future scope for real hardware integration and persistent cloud storage.
+![Next.js](https://img.shields.io/badge/Next.js-Framework-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-Typed-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-Styling-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
 
-Explore. Build. Demonstrate. Innovate.
+</div>
 
-## Repository and project handoff
+---
 
-GitHub repository: https://github.com/yeshwanthkumardomala/circux-os
+## ◈ About Circux
 
-Online demo (frontend): https://circux-os.vercel.app/
+Circux OS is a browser-based platform for **STEM educators, robotics labs, students, and exhibition teams**. It brings project organization, documentation, presentation, and judging into one workspace.
 
-The source code is hosted online on GitHub. The live Circux application remains local to the event computer and LAN; GitHub does not run the FastAPI backend or hardware connections.
+Designed for local exhibition workflows, Circux supports QR-based project access and phone-to-display pairing. It is a prototype in active development; some data and telemetry remain local or simulated.
 
-Full development history, architecture, setup, security notes, testing, and future work: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+## ✦ Core Features
 
-For the simplest Windows launch, double-click [RUN-CIRCUX.bat](RUN-CIRCUX.bat). It starts the local FastAPI backend and LAN-accessible frontend. The launcher asks for `CIRCUX_ADMIN_TOKEN`; this is a private local secret and is intentionally not stored in GitHub.
+| Feature | What it does |
+| --- | --- |
+| **Project Workspace** | Organize project details, teams, categories, status, and summaries. |
+| **Project Documentation** | Present project stories, circuit information, media links, and report drafts. |
+| **QR Project Access** | Open project details from scannable QR cards. |
+| **Display Pairing** | Pair a phone with an exhibition display over a local network. |
+| **Dual-Project Showcase** | Present two projects in Slot A and Slot B, with clear and swap controls. |
+| **Judging Workflow** | Record and display project evaluation scores. |
+| **Telemetry Demonstrations** | Display sample readings and status information for demonstrations. |
 
-Circux OS is a locally runnable showcase and administration prototype for robotics, electronics, STEM projects, documentation, exhibitions, simulated monitoring, and judging.
+## ⟡ Technology Stack
 
-## Run locally
+<div align="center">
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | Next.js, React, TypeScript |
+| Styling | Tailwind CSS |
+| Backend foundation | FastAPI |
+| Exhibition relay | Node.js, Server-Sent Events |
+| Deployment | Vercel (frontend) |
+
+</div>
+
+## ⚡ Quick Start
+
+### Requirements
+
+- Node.js and npm
+- Git (recommended)
+
+### Run the frontend
 
 ```bash
+git clone https://github.com/yeshwanthkumardomala/circux-os.git
+cd circux-os
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open **http://localhost:3000** in your browser.
 
-For a complete exhibition session with the app, LAN relay, pairing QR, and simulated live feeds, use one command:
+### Run the exhibition workflow
+
+For the local app, exhibition relay, QR pairing, and demonstration feeds, run:
 
 ```bash
 npm run exhibition
 ```
 
-The FastAPI backend foundation can be started separately with `npm run backend` on port `8000`. The existing Node relay remains available for the current display pairing flow while the device API is migrated.
+Open the display at **http://localhost:3000/display**. For phone pairing, use the host computer's LAN IP address instead of `localhost`, and connect both devices to the same trusted Wi-Fi network.
 
-Open `http://localhost:3000/display` on the large display. Scan its pairing QR with a phone, then scan any project QR and choose Slot A or Slot B. The relay runs on port `3002` and keeps the two-slot session in memory.
+For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) and [HARDWARE.md](HARDWARE.md) for additional setup and integration details.
 
-Use `http://localhost:3000/qr-test` to test three scannable project QR cards. For phones, open the LAN-IP version of that URL so the QR links are reachable over Wi‑Fi.
+## ◈ Feature Status
 
-To automatically commit and push changes every 15 minutes, run this in a separate terminal. It waits 15 minutes before the first push:
+| Capability | Current status |
+| --- | --- |
+| Project workspace and showcase | Available in the prototype |
+| QR project pages and display pairing | Available in the local exhibition workflow |
+| Judging and browser-local settings | Prototype functionality |
+| Sensor telemetry | Demonstration / simulated data |
+| Persistent cloud database | Not connected |
+| Production authentication | Not implemented |
+| Direct hardware control | Requires a configured adapter and testing |
 
-```bash
-npm run auto-push
-```
+## 🔐 Security & Data Notes
 
-For the large judge display, run a second process in another terminal:
+- Project records, report drafts, settings, and judging data use browser-local storage.
+- Exhibition relay state is held in memory and resets when the relay stops.
+- Uploaded files are registered by name; this workflow does not upload their contents.
+- Keep device keys and admin tokens private. Do not commit secrets to the repository.
+- Use the relay only on a trusted network and configure hardware adapters before enabling device commands.
 
-```bash
-npm run dev:display
-```
+## 🧭 Roadmap
 
-Open `http://localhost:3001/display/CX-104` or `http://localhost:3001/display?ids=CX-104,CX-106`. For phone scanning over Wi-Fi, use the computer's LAN IP (for example `http://192.168.1.20:3000`) instead of `localhost`.
+- [ ] Persistent project and judging storage
+- [ ] Authentication and role-based access
+- [ ] More complete hardware adapter integrations
+- [ ] Automated tests for pairing, projects, and judging
+- [ ] Improved reporting and export workflows
 
-## Production build
+## 🤝 Contributing
 
-```bash
-npm run build
-npm start
-```
+Contributions, bug reports, and feature suggestions are welcome. Please open an issue to discuss significant changes before submitting a pull request.
 
-The workspace remains browser-first: reports, uploads, telemetry, power states, and judge actions are local or simulated. The exhibition relay is a small in-memory backend for sharing projects/config with display phones; it is not a persistent production database. Uploaded files are registered by name only and are not sent to a server.
+## 📄 License
 
-The exhibition relay now provides a small shared backend for project/config sync and optional hardware testing. See `HARDWARE.md`; hardware commands require `CIRCUX_DEVICE_KEY` and an adapter URL, and the relay must remain on a trusted network.
+Check the repository for a license file before reusing or redistributing this project.
 
-## Review notes
+---
 
-- The core flow is interactive: dashboard → projects → builder → documentation → showcase → judging.
-- Project records, theme, upload names, report drafts, judging scores, and showcase state use browser-local storage.
-- The materials audit remains available as supporting data, but the main UI is intentionally showcase-first rather than a materials catalog.
-- Project QR cards open mobile detail pages with sample team, readings, documentation, circuit, and development-video content.
-- The QR image is fetched from a small online QR image service in this frontend-only phase; the project URL itself remains local to the event Wi-Fi.
-- Phone-to-screen switching is available over the local relay during `npm run exhibition`; the relay is intended for a trusted event Wi-Fi and resets when it stops.
+<div align="center">
 
-## Current work context
+**CIRCUX OS** · Explore. Build. Demonstrate. Innovate.
 
-Work completed in the current session:
+<sub>Built for connected STEM and robotics experiences.</sub>
 
-- Initialized Git and pushed the Circux OS prototype to `https://github.com/yeshwanthkumardomala/circux-os.git` on branch `main`.
-- Added a LAN relay on port `3002` using native Node HTTP and Server-Sent Events.
-- Added display pairing by QR, phone-to-display project selection, Slot A / Slot B control, clear, and swap actions.
-- Added a two-project display with project story, photos, documents, videos, simulated live readings, status, and update times.
-- Added the three-project QR test bench at `/qr-test` for CX-101, CX-102, and CX-103.
-- Added `npm run exhibition` to start the Next app and relay together.
-- Added `npm run auto-push`, which waits 15 minutes before its first commit/push and repeats on a 15-minute interval.
-- Fixed LAN QR generation so a display opened through `localhost` advertises the reachable Wi-Fi address instead of giving phones an unusable `localhost` link.
-- Fixed hydration errors caused by host-dependent QR and relay URLs being different during server rendering and browser hydration.
-
-Latest verified LAN test URLs on the current Wi-Fi:
-
-- Display: `http://10.14.231.177:3000/display`
-- QR test bench: `http://10.14.231.177:3000/qr-test`
-- Relay health: `http://10.14.231.177:3002/health`
-
-Verification completed: production build passed before the final hydration-only fix, TypeScript checking passed after it, the display, project, pairing, and QR test routes returned HTTP 200, and relay session/slot updates were tested successfully.
-
-Known limits: project data and relay state are still in memory/browser storage; live readings are simulated; media uses URLs; no hardware, authentication, cloud database, or persistent event history is connected.
-
-## Admin and mobile presentation
-
-The Settings panel now edits workspace identity, venue, event date, display defaults, slot defaults, feed labeling, and complete project records. Project records can be edited locally for names, student roles, category, status, progress, summaries, readings, photos, document links, video links, and circuit stories. Use “Export all config” before changing browsers.
-
-On a phone, use the LAN URL and choose the browser’s “Add to Home screen” / “Install app” option. Circux includes a standalone PWA manifest for a compact app-like experience; a signed native Android APK is intentionally outside this frontend-only prototype.
+</div>
