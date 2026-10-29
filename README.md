@@ -1,4 +1,24 @@
-# Circux OS
+◈ Circux OS
+
+The Operating Workspace for STEM & Robotics
+
+Circux OS is a modern web-based platform designed to transform how robotics projects are managed, presented, and evaluated. From interactive project showcases and QR-powered access to live exhibition displays and judging workflows, Circux OS brings essential STEM exhibition tools into one unified workspace.
+
+Built with: Next.js · React · TypeScript · Tailwind CSS
+
+Key Features
+
+- ◈ Centralized Project Management
+- ◈ Interactive STEM Showcases
+- ◈ QR-Based Project Access
+- ◈ Mobile-to-Display Pairing
+- ◈ Dual-Project Presentation
+- ◈ Judging & Score Management
+- ◈ Sensor Telemetry Demonstrations
+
+Designed for students, educators, robotics labs, and science exhibitions, Circux OS provides a foundation for connected STEM experiences, with future scope for real hardware integration and persistent cloud storage.
+
+Explore. Build. Demonstrate. Innovate.
 
 ## Repository and project handoff
 
