@@ -26,7 +26,9 @@ const deviceKey = process.env.CIRCUX_DEVICE_KEY;
 const adminToken = process.env.CIRCUX_ADMIN_TOKEN || '';
 
 function requireAdmin(req, res) {
-  if (!adminToken || req.headers.authorization !== `Bearer ${adminToken}`) {
+  const supplied = Buffer.from(String(req.headers.authorization || ''));
+  const expected = Buffer.from(`Bearer ${adminToken}`);
+  if (!adminToken || supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
     json(res, 401, { error: 'Admin authentication required. Configure CIRCUX_ADMIN_TOKEN and enter it in the browser when prompted.' });
     return false;
   }
@@ -113,6 +115,8 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/device/readings') { if (!requireAdmin(req, res)) return; return json(res, 200, await deviceRequest('/readings')); }
     if (req.method === 'POST' && url.pathname === '/device/command') {
       if (!deviceKey || req.headers['x-circux-device-key'] !== deviceKey) return json(res, 401, { error: 'Hardware command authentication required' });
+      if (!requireAdmin(req, res)) return;
+      if (process.env.CIRCUX_ENABLE_HARDWARE_COMMANDS !== 'true') return json(res, 403, { error: 'Hardware commands are disabled. Enable CIRCUX_ENABLE_HARDWARE_COMMANDS only after validating physical safety interlocks.' });
       const input = await readBody(req, 4096);
       if (!['wake', 'restart', 'power-off'].includes(input.action)) return json(res, 400, { error: 'action must be wake, restart, or power-off' });
       return json(res, 200, await deviceRequest('/command', { method: 'POST', body: JSON.stringify({ action: input.action }) }));
