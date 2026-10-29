@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "test:relay": "node scripts/test-relay.js",
-    "log:activity": "powershell -ExecutionPolicy Bypass -File scripts/log-activity.ps1"
+    "log:activity": "powershell -ExecutionPolicy Bypass -File scripts/log-activity.ps1",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
