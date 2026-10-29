@@ -205,6 +205,9 @@ button { cursor:pointer; }
 .event-context { display:block; margin-top:2px; color:var(--muted); font-size:9px; font-weight:400; }
 .admin-access p { max-width:850px; color:var(--muted); font-size:12px; line-height:1.7; }
 .admin-access code { color:var(--blue); font-size:11px; }
+.admin-token-controls { display:grid; grid-template-columns:minmax(220px,1fr) auto; gap:12px; align-items:end; margin:14px 0; }
+.admin-token-controls .field { margin:0; }
+.admin-token-controls input { display:block; width:100%; margin-top:6px; }
 @media (max-width:720px) {
   .splash-brands { gap:11px; }
   .splash-brands .splash-logo,.splash-partner-logo { width:84px; height:84px; }
@@ -214,5 +217,7 @@ button { cursor:pointer; }
   .showcase-actions > * { flex:1 1 100%; justify-content:center; }
   .appearance-settings { align-items:flex-start; flex-direction:column; }
   .appearance-settings .actions { width:100%; }
+  .admin-token-controls { grid-template-columns:1fr; }
+  .admin-token-controls .actions { flex-wrap:wrap; }
   .brand-credit { flex-wrap:wrap; }
 }

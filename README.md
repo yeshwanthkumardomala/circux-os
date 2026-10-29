@@ -6,7 +6,7 @@
 
 **Build. Showcase. Evaluate.**
 
-Logo by **sidya.v05** · Developed by **Yeshwanthkumardomala**
+**sidya.v05** · Developed by **Yeshwanthkumardomala**
 
 A modern workspace for organizing robotics projects, presenting student innovations, and managing STEM exhibitions — from project documentation to QR-powered display workflows.
 
@@ -145,7 +145,7 @@ The workspace now loads and syncs project/config records through the local relay
 
 The Projects page includes edit, hide/show, and delete actions. Settings includes light/dark theme controls. Missing project details remain empty instead of borrowing readings from another project. The loading screen shows the Circux and sidya.v05 logos, and the site credits sidya.v05 and Yeshwanthkumardomala.
 
-For Windows, `RUN-CIRCUX.bat` creates a random `CIRCUX_ADMIN_TOKEN` when one is not configured, saves it in the ignored `.env` file, and prints it in the launch terminal. Use that value when the browser prompts or Board Health asks for an admin API token. This is different from a board/device token. The local FastAPI docs are at `http://localhost:8000/docs` while the backend is running.
+For Windows, `RUN-CIRCUX.bat` creates a random `CIRCUX_ADMIN_TOKEN` when one is not configured, saves it in the ignored `.env` file, and prints it in the launch terminal. In the admin Settings page, paste it once into **Local backend access** and save it to this browser; it can then be revealed or copied there and is also used by Board Health. The frontend cannot read `.env` automatically. This admin token is different from each board/device token. The local FastAPI docs are at `http://localhost:8000/docs` while the backend is running.
 
 To point a browser build at a relay reachable by its users, set `NEXT_PUBLIC_CIRCUX_RELAY_URL` at build time and allow the frontend origin in `CIRCUX_ALLOWED_ORIGIN`. Do not point the public Vercel site at a private LAN address. Supabase is active, but currently has no application tables; Vercel has no database/backend environment configured. Shared cloud persistence is therefore unavailable. Use the local exhibition server for shared event data on the venue LAN.
 
