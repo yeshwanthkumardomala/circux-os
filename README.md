@@ -28,13 +28,23 @@ A modern workspace for organizing robotics projects, presenting student innovati
 
 Circux OS is a browser-based platform for **STEM educators, robotics labs, students, and exhibition teams**. It brings project organization, documentation, presentation, and judging into one workspace.
 
-Designed for local exhibition workflows, Circux supports QR-based project access and phone-to-display pairing. It is a prototype in active development; some data and telemetry remain local or simulated.
+Designed for local exhibition workflows, Circux supports QR-based project access and phone-to-display pairing. The current build is a tested prototype, not a fully managed multi-user production service: persistence, identity management, and live sensor telemetry require additional infrastructure.
+
+## 📸 Live deployment preview
+
+The following preview is captured from the public Vercel deployment. It may refresh as the deployment changes.
+
+[Open CIRCUX OS in your browser](https://circux-os.vercel.app/)
+
+![CIRCUX OS live deployment screenshot](https://image.thum.io/get/width/1200/crop/900/noanimate/https://circux-os.vercel.app/)
+
+> Mobile UI note: telemetry and hardware controls are explicitly labelled as simulated when no hardware is connected. A global project search is available from the workspace header.
 
 ## ✦ Core Features
 
 | Feature | What it does |
 | --- | --- |
-| **Project Workspace** | Organize project details, teams, categories, status, and summaries. |
+| **Project Workspace** | Organize project details, teams, categories, status, and summaries, with global project search. |
 | **Project Documentation** | Present project stories, circuit information, media links, and report drafts. |
 | **QR Project Access** | Open project details from scannable QR cards. |
 | **Display Pairing** | Pair a phone with an exhibition display over a local network. |
@@ -97,8 +107,8 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 | Judging and browser-local settings | Prototype functionality |
 | Sensor telemetry | Demonstration / simulated data |
 | Persistent cloud database | Not connected |
-| Production authentication | Not implemented |
-| Direct hardware control | Requires a configured adapter and testing |
+| Production authentication | Not implemented; admin token protects selected relay endpoints only |
+| Direct hardware control | Disabled by default; requires a configured adapter, explicit opt-in, and physical safety testing |
 
 ## 🔐 Security & Data Notes
 
@@ -109,6 +119,20 @@ See [SECURITY.md](SECURITY.md) for safe deployment guidance and vulnerability re
 - Uploaded files are registered by name; this workflow does not upload their contents.
 - Keep device keys and admin tokens private. Do not commit secrets to the repository.
 - Use the relay only on a trusted network and configure hardware adapters before enabling device commands.
+
+## 🚀 Production-readiness checklist
+
+Before using this with real students, judges, or devices:
+
+- [ ] Add durable server-side storage and backups for projects, reports, uploads, and judging.
+- [ ] Implement user accounts, role-based permissions, session expiry, and audit logs.
+- [ ] Configure production environment variables in Vercel and any separately hosted relay/backend.
+- [ ] Use HTTPS/WSS for all remote device and relay traffic; avoid exposing admin tokens in URLs.
+- [ ] Run end-to-end tests on mobile and desktop against the deployed environment.
+- [ ] Test upload limits, recovery, rate limiting, and backup/restore procedures.
+- [ ] Validate every hardware command with a physical interlock and fail-safe state.
+
+CI verifies type checking, relay smoke/security tests, production build, and Python backend tests. A green CI run does not itself prove that Vercel environment variables, external services, or physical hardware are configured correctly.
 
 ## 🧭 Roadmap
 
