@@ -10,6 +10,8 @@ Circux OS is currently a local-first STEM exhibition prototype. It includes a br
 - Do not expose the Node relay or FastAPI ports directly to the public internet.
 - Use long, unique values for `CIRCUX_ADMIN_TOKEN` and `CIRCUX_DEVICE_KEY`; keep them outside source control.
 - Do not treat CORS as authentication. Non-browser clients can call HTTP endpoints directly.
+- The Node relay requires `CIRCUX_ADMIN_TOKEN` for workspace configuration, project writes, judging records, and upload access. The browser prompts for this token and stores it in that browser's local storage; use it only on a trusted device.
+- Keep `/session/{token}` links private: session tokens grant control over paired display slots until they expire.
 - Use the FastAPI admin token only where that API's authorization is enforced. Review relay routes separately before using the system with untrusted clients.
 - Keep hardware adapters in sensor-only mode until command authorization, physical safety interlocks, and failure behavior have been tested.
 - Back up `.circux-data` securely and restrict access to stored uploads and local database files.
