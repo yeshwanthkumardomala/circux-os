@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Search, ArrowRight } from 'lucide-react';
 import { defaultProjects, type Project } from '../../lib/project-data';
 import { loadLocal } from '../../lib/storage';
+import { searchProjects } from '../../lib/project-search';
 
 type Props = {
   projects?: Project[];
@@ -29,14 +30,7 @@ export default function GlobalProjectSearch({ projects, onSelect, placeholder = 
     setLocalProjects(loadLocal<Project[]>('circux-projects', defaultProjects));
   }, [projects]);
 
-  const results = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase();
-    if (!term) return [];
-    return localProjects.filter(project =>
-      [project.name, project.team, project.category, project.summary, project.id, project.status]
-        .some(value => value.toLocaleLowerCase().includes(term))
-    ).slice(0, 8);
-  }, [localProjects, query]);
+  const results = useMemo(() => searchProjects(localProjects, query), [localProjects, query]);
 
   useEffect(() => setActiveIndex(0), [query]);
 
