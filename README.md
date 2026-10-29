@@ -76,6 +76,8 @@ Open **http://localhost:3000** in your browser.
 
 ### Run the exhibition workflow
 
+First copy `.env.example` to `.env`, then edit the file and set a long random `CIRCUX_ADMIN_TOKEN`. The relay reads `.env` automatically. Keep `.env` private and do not commit it.
+
 For the local app, exhibition relay, QR pairing, and demonstration feeds, run:
 
 ```bash
