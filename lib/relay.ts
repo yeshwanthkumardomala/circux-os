@@ -15,13 +15,14 @@ export async function relayFetch(path: string, init?: RequestInit) {
   let response = await fetch(relayUrl(path), { ...init, headers });
   const errorBody = response.status === 401 ? await response.clone().json().catch(() => null) : null;
   if (response.status === 401 && typeof window !== 'undefined' && /Admin authentication required/i.test(errorBody?.error || '')) {
-    let token = window.localStorage.getItem(ADMIN_TOKEN_KEY);
-    if (!token) {
-      token = window.prompt('Enter the local Circux admin token configured as CIRCUX_ADMIN_TOKEN:')?.trim() || null;
-      if (token) {
-        window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
-        window.localStorage.setItem('circux-admin-token', token);
-      }
+    const savedToken = window.localStorage.getItem(ADMIN_TOKEN_KEY);
+    const promptText = savedToken
+      ? 'The saved Circux admin token was rejected. Enter the correct CIRCUX_ADMIN_TOKEN:'
+      : 'Enter the local Circux admin token configured as CIRCUX_ADMIN_TOKEN:';
+    const token = window.prompt(promptText)?.trim() || null;
+    if (token) {
+      window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
+      window.localStorage.setItem('circux-admin-token', token);
     }
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
