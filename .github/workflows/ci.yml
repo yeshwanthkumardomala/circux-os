@@ -35,6 +35,9 @@ jobs:
       - name: TypeScript check
         run: npm run typecheck
 
+      - name: Global search coverage regression test
+        run: npm run test:search
+
       - name: Relay smoke test
         run: npm run test:relay
 
