@@ -1,9 +1,26 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-if "%CIRCUX_ADMIN_TOKEN%"=="" for /f "delims=" %%T in ('powershell -NoProfile -Command "[Convert]::ToBase64String((1..32 ^| ForEach-Object { Get-Random -Maximum 256 }))"') do set "CIRCUX_ADMIN_TOKEN=%%T"
-echo Local admin token created for this run: %CIRCUX_ADMIN_TOKEN%
-start "Circux FastAPI" cmd /k "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
+
+if "%CIRCUX_ADMIN_TOKEN%"=="" (
+  for /f "delims=" %%T in ('powershell -NoProfile -Command "[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))"') do set "CIRCUX_ADMIN_TOKEN=%%T"
+)
+echo Circux admin token for this session: %CIRCUX_ADMIN_TOKEN%
+echo Keep this token private. The browser will ask for it when accessing protected features.
+
+if not exist node_modules (
+  echo Node dependencies are missing. Run npm install first.
+  pause
+  exit /b 1
+)
+
+if not exist backend\requirements.txt (
+  echo Backend requirements file is missing.
+  pause
+  exit /b 1
+)
+
+start "Circux FastAPI" cmd /k "cd /d "%~dp0" ^&^& python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
 timeout /t 2 /nobreak >nul
-echo Circux frontend starting at http://localhost:3000
-npm.cmd run dev -- --hostname 0.0.0.0
+echo Starting Circux exhibition at http://localhost:3000/display
+npm.cmd run exhibition
