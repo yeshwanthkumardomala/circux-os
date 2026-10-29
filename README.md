@@ -4,6 +4,8 @@
 
 GitHub repository: https://github.com/yeshwanthkumardomala/circux-os
 
+Online demo (frontend): https://circux-os.vercel.app/
+
 The source code is hosted online on GitHub. The live Circux application remains local to the event computer and LAN; GitHub does not run the FastAPI backend or hardware connections.
 
 Full development history, architecture, setup, security notes, testing, and future work: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
