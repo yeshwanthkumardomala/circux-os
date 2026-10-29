@@ -20,7 +20,7 @@ if not exist backend\requirements.txt (
   exit /b 1
 )
 
-start "Circux FastAPI" cmd /k "cd /d "%~dp0" ^&^& python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
+start "Circux FastAPI" /D "%~dp0" cmd /k "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
 timeout /t 2 /nobreak >nul
 echo Starting Circux exhibition at http://localhost:3000/display
 npm.cmd run exhibition
