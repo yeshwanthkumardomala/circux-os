@@ -5,7 +5,7 @@ const path = require('path');
 
 const port = 3012;
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'circux-relay-test-'));
-const relay = spawn(process.execPath, ['relay-server.js'], { env: { ...process.env, CIRCUX_RELAY_PORT: String(port), CIRCUX_DATA_DIR: dataDir, CIRCUX_ADMIN_TOKEN: 'test-admin-token' }, stdio: 'ignore' });
+const relay = spawn(process.execPath, ['relay-server.js'], { env: { ...process.env, CIRCUX_RELAY_PORT: String(port), CIRCUX_DATA_DIR: dataDir, CIRCUX_ADMIN_TOKEN: 'test-admin-token', CIRCUX_DEVICE_KEY: 'test-device-key', CIRCUX_ENABLE_HARDWARE_COMMANDS: 'false' }, stdio: 'ignore' });
 const base = `http://127.0.0.1:${port}`;
 
 async function request(path, init) {
@@ -58,6 +58,10 @@ async function waitForRelay() {
     if (hardware.configured !== false || hardware.mode !== 'simulation') throw new Error('Hardware fallback failed');
     const unauthorized = await fetch(base + '/device/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'wake' }) });
     if (unauthorized.status !== 401) throw new Error('Hardware command was not protected');
+    const deviceOnly = await fetch(base + '/device/command', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Circux-Device-Key': 'test-device-key' }, body: JSON.stringify({ action: 'wake' }) });
+    if (deviceOnly.status !== 401) throw new Error('Hardware command did not require admin authentication');
+    const hardwareDisabled = await fetch(base + '/device/command', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-admin-token', 'X-Circux-Device-Key': 'test-device-key' }, body: JSON.stringify({ action: 'wake' }) });
+    if (hardwareDisabled.status !== 403) throw new Error('Hardware command was not disabled by default');
     const judgingDenied = await fetch(base + '/judging', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: 'TEST-1', scores: [] }) });
     if (judgingDenied.status !== 401) throw new Error('Unauthenticated judging write was accepted');
     console.log('Relay smoke test passed');
