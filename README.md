@@ -76,3 +76,9 @@ Latest verified LAN test URLs on the current Wi-Fi:
 Verification completed: production build passed before the final hydration-only fix, TypeScript checking passed after it, the display, project, pairing, and QR test routes returned HTTP 200, and relay session/slot updates were tested successfully.
 
 Known limits: project data and relay state are still in memory/browser storage; live readings are simulated; media uses URLs; no hardware, authentication, cloud database, or persistent event history is connected.
+
+## Admin and mobile presentation
+
+The Settings panel now edits workspace identity, venue, event date, display defaults, slot defaults, feed labeling, and complete project records. Project records can be edited locally for names, student roles, category, status, progress, summaries, readings, photos, document links, video links, and circuit stories. Use “Export all config” before changing browsers.
+
+On a phone, use the LAN URL and choose the browser’s “Add to Home screen” / “Install app” option. Circux includes a standalone PWA manifest for a compact app-like experience; a signed native Android APK is intentionally outside this frontend-only prototype.

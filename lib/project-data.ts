@@ -11,7 +11,7 @@ export type ProjectDetail = {
   media?: ProjectMedia;
   live?: ProjectLiveState;
 };
-export type Project = { id: string; name: string; category: string; team: string; status: string; progress: number; summary: string; details?: ProjectDetail };
+export type Project = { id: string; name: string; category: string; team: string; status: string; progress: number; summary: string; dataMode?: 'presentation' | 'live'; details?: ProjectDetail };
 
 export const defaultProjects: Project[] = [
   { id:'CX-101', name:'BioBots — Interactive Human Anatomy', category:'STEM exhibition', team:'Astra team', status:'In development', progress:78, summary:'An interactive anatomy exhibit with guided learning stations.' },

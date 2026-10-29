@@ -17,11 +17,11 @@ function Panel({ slot, projectId, feed, clear }: { slot: 'A' | 'B'; projectId: s
   return <section className="display-live-panel">
     <div className="display-panel-top"><span className="display-slot">SLOT {slot} · {project.id}</span><button className="display-small-button" onClick={() => clear(slot)}><Trash2 size={14} /> Clear</button></div>
     <div className="display-eyebrow">{project.category}</div><h2>{project.name}</h2><p className="display-summary">{project.summary}</p>
-    <div className="display-tags"><span>{project.team}</span><span>{project.progress}% prepared</span><span className="display-live-badge">{feed?.state === 'running' ? '● LIVE SIMULATION' : 'SIMULATED'}</span></div>
+    <div className="display-tags"><span>{project.team}</span><span>{project.progress}% prepared</span><span className="display-live-badge">{project.dataMode === 'live' ? 'LIVE DATA' : 'PRESENTATION FEED'}</span></div>
     <div className="display-photo-strip">{details.media?.photos?.slice(0, 3).map(photo => <img key={photo} src={photo} alt="Project demonstration" />) || <div className="display-photo-fallback"><Images size={18} /> No project photos yet</div>}</div>
     <div className="display-live-grid"><div><h3><CircuitBoard size={16} /> Live readings</h3>{readings.map(reading => <div className="display-reading" key={reading.label}><span>{reading.label}<small>{reading.note}</small></span><strong>{reading.value}</strong></div>)}</div><div><h3><Users size={16} /> Team</h3>{details.members.map(member => <div className="display-member" key={member.name}><strong>{member.name}</strong><span>{member.role}</span></div>)}</div></div>
     <div className="display-media-links">{details.media?.documents?.map(document => <a key={document.title} href={document.url} target="_blank" rel="noreferrer"><LinkIcon size={13} /> {document.title}</a>)}{details.media?.videos?.map(video => <a key={video.title} href={video.url} target="_blank" rel="noreferrer"><Play size={13} /> {video.title}</a>)}</div>
-    <footer>Updated {feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString() : 'from project record'} · all readings are illustrative</footer>
+    <footer>Updated {feed?.updatedAt ? new Date(feed.updatedAt).toLocaleTimeString() : 'from project record'} · operator-controlled project feed</footer>
   </section>;
 }
 
