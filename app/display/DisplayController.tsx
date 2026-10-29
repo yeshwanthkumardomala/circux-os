@@ -5,6 +5,7 @@ import { ArrowLeftRight, CircuitBoard, Expand, Images, Link as LinkIcon, Play, R
 import { getProject, type Project, type ProjectReading } from '../../lib/project-data';
 import { pairingUrl, qrImageUrl } from '../../lib/qr';
 import { relayRequest, relayUrl } from '../../lib/relay';
+import GlobalProjectSearch from '../components/GlobalProjectSearch';
 
 type Slots = { A: string | null; B: string | null };
 type Feed = { readings: ProjectReading[]; state: string; updatedAt: string };
@@ -71,7 +72,7 @@ export default function DisplayController() {
   const swap = () => token && relayRequest(`/session/${token}/swap`, { method: 'POST' }).catch(() => setError('Could not update the relay.'));
   const fullscreen = () => document.documentElement.requestFullscreen?.();
 
-  return <main className="display-page display-console"><header className="display-header"><span>CIRCUX OS · LIVE EXHIBITION DISPLAY</span><div className="display-header-actions"><span className={connected ? 'display-connection connected' : 'display-connection'}>● {connected ? 'RELAY CONNECTED' : 'RELAY OFFLINE'}</span><button className="display-small-button" onClick={fullscreen}><Expand size={14} /> Fullscreen</button></div></header>
+  return <main className="display-page display-console"><header className="display-header"><span>CIRCUX OS · LIVE EXHIBITION DISPLAY</span><GlobalProjectSearch compact /><div className="display-header-actions"><span className={connected ? 'display-connection connected' : 'display-connection'}>● {connected ? 'RELAY CONNECTED' : 'RELAY OFFLINE'}</span><button className="display-small-button" onClick={fullscreen}><Expand size={14} /> Fullscreen</button></div></header>
     <section className="display-console-head"><div><div className="display-eyebrow">Two project showcase</div><h1>Live project display</h1><p>Pair a phone, then send any scanned project to Slot A or Slot B.</p></div>{pairUrl && <div className="pair-card"><img src={qrImageUrl(pairUrl)} alt="Pair phone with this display" /><div><strong>Pair a phone</strong><small>Scan once, then scan project QR cards</small></div></div>}</section>
     {error && <div className="display-alert"><RefreshCw size={15} /> {error}</div>}
     <div className="display-console-actions"><button className="display-small-button" onClick={swap}><ArrowLeftRight size={14} /> Swap slots</button><span>{projects.length} project{projects.length === 1 ? '' : 's'} active · simulated live feeds</span></div>
