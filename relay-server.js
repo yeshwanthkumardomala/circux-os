@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
       if (!deviceUrl) return json(res, 200, { configured: false, connected: false, mode: 'simulation' });
       try { return json(res, 200, { configured: true, connected: true, mode: 'hardware', ...(await deviceRequest('/health')) }); } catch (error) { return json(res, 200, { configured: true, connected: false, mode: 'hardware', error: error.message }); }
     }
-    if (req.method === 'GET' && url.pathname === '/device/readings') return json(res, 200, await deviceRequest('/readings'));
+    if (req.method === 'GET' && url.pathname === '/device/readings') { if (!requireAdmin(req, res)) return; return json(res, 200, await deviceRequest('/readings')); }
     if (req.method === 'POST' && url.pathname === '/device/command') {
       if (!deviceKey || req.headers['x-circux-device-key'] !== deviceKey) return json(res, 401, { error: 'Hardware command authentication required' });
       const input = await readBody(req, 4096);
@@ -135,13 +135,16 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/uploads') {
       if (!requireAdmin(req, res)) return;
-      const input = await readBody(req, 12 * 1024 * 1024);
-      if (typeof input.name !== 'string' || typeof input.data !== 'string') return json(res, 400, { error: 'name and data are required' });
+      const input = await readBody(req, 14 * 1024 * 1024);
+      if (typeof input.name !== 'string' || !input.name.trim() || typeof input.data !== 'string') return json(res, 400, { error: 'name and data are required' });
+      if (input.name.length > 200) return json(res, 400, { error: 'name must be 200 characters or fewer' });
       const id = crypto.randomUUID();
-      const buffer = Buffer.from(input.data.replace(/^data:[^;]+;base64,/, ''), 'base64');
+      const encoded = input.data.replace(/^data:[^;]+;base64,/, '');
+      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) return json(res, 400, { error: 'data must contain valid base64 file content' });
+      const buffer = Buffer.from(encoded, 'base64');
       if (buffer.length > 10 * 1024 * 1024) return json(res, 413, { error: 'file is too large' });
       store.writeUpload(id, buffer);
-      const record = { id, name: input.name.slice(0, 200), type: typeof input.type === 'string' ? input.type : 'application/octet-stream', size: buffer.length, createdAt: new Date().toISOString() };
+      const record = { id, name: input.name.slice(0, 200), type: typeof input.type === 'string' && /^[\w.+-]+\/[\w.+-]+$/.test(input.type) ? input.type : 'application/octet-stream', size: buffer.length, createdAt: new Date().toISOString() };
       uploads.push(record); persist(); return json(res, 201, record);
     }
     if (req.method === 'DELETE' && parts[0] === 'uploads' && parts[1]) {
