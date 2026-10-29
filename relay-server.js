@@ -220,7 +220,10 @@ const server = http.createServer(async (req, res) => {
     }
     return json(res, 404, { error: 'Not found' });
   } catch (error) {
-    return json(res, 400, { error: error.message });
+    const message = error instanceof Error ? error.message : 'Unknown relay error';
+    const clientError = ['Invalid JSON', 'Request body too large', 'Each project needs an id and name'].includes(message);
+    if (!clientError) console.error('Relay request failed:', message);
+    return json(res, clientError ? 400 : 500, { error: clientError ? message : 'Internal relay error' });
   }
 });
 
