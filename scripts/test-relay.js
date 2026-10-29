@@ -5,7 +5,7 @@ const path = require('path');
 
 const port = 3012;
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'circux-relay-test-'));
-const relay = spawn(process.execPath, ['relay-server.js'], { env: { ...process.env, CIRCUX_RELAY_PORT: String(port), CIRCUX_DATA_DIR: dataDir }, stdio: 'ignore' });
+const relay = spawn(process.execPath, ['relay-server.js'], { env: { ...process.env, CIRCUX_RELAY_PORT: String(port), CIRCUX_DATA_DIR: dataDir, CIRCUX_ADMIN_TOKEN: 'test-admin-token' }, stdio: 'ignore' });
 const base = `http://127.0.0.1:${port}`;
 
 async function request(path, init) {
@@ -27,8 +27,15 @@ async function waitForRelay() {
     await waitForRelay();
     const cors = await fetch(base + '/health', { headers: { Origin: 'http://evil.example:3000' } });
     if (cors.headers.get('access-control-allow-origin')) throw new Error('Untrusted CORS origin was allowed');
+    const unauthenticatedWrite = await fetch(base + '/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projects: [] }) });
+    if (unauthenticatedWrite.status !== 401) throw new Error('Unauthenticated project write was accepted');
+    const adminHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer test-admin-token' };
     const project = { id: 'TEST-1', name: 'Relay test project', team: 'Test team', category: 'Test', status: 'Ready', progress: 100, summary: 'Test project' };
-    await request('/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projects: [project] }) });
+    await request('/projects', { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ projects: [project] }) });
+    const configDenied = await fetch(base + '/config');
+    if (configDenied.status !== 401) throw new Error('Config read was not protected');
+    const config = await request('/config', { headers: { Authorization: 'Bearer test-admin-token' } });
+    if (!config.slotA) throw new Error('Authorized config read failed');
     const stored = await request('/projects/TEST-1');
     if (stored.name !== project.name) throw new Error('Project sync failed');
     const session = await request('/session', { method: 'POST' });
@@ -39,6 +46,8 @@ async function waitForRelay() {
     if (hardware.configured !== false || hardware.mode !== 'simulation') throw new Error('Hardware fallback failed');
     const unauthorized = await fetch(base + '/device/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'wake' }) });
     if (unauthorized.status !== 401) throw new Error('Hardware command was not protected');
+    const judgingDenied = await fetch(base + '/judging', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: 'TEST-1', scores: [] }) });
+    if (judgingDenied.status !== 401) throw new Error('Unauthenticated judging write was accepted');
     console.log('Relay smoke test passed');
   } finally {
     relay.kill();
