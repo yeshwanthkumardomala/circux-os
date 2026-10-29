@@ -8,3 +8,7 @@ export async function relayRequest<T>(path: string, init?: RequestInit) {
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || `Relay request failed (${response.status})`);
   return response.json() as Promise<T>;
 }
+
+export function syncRelay<T>(path: string, value: T) {
+  return relayRequest(path, { method: 'PUT', body: JSON.stringify(value) }).catch(() => undefined);
+}

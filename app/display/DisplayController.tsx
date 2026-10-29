@@ -9,8 +9,8 @@ import { relayRequest, relayUrl } from '../../lib/relay';
 type Slots = { A: string | null; B: string | null };
 type Feed = { readings: ProjectReading[]; state: string; updatedAt: string };
 
-function Panel({ slot, projectId, feed, clear }: { slot: 'A' | 'B'; projectId: string | null; feed?: Feed; clear: (slot: 'A' | 'B') => void }) {
-  const project = projectId ? getProject(projectId) : null;
+function Panel({ slot, projectId, project, feed, clear }: { slot: 'A' | 'B'; projectId: string | null; project?: Project | null; feed?: Feed; clear: (slot: 'A' | 'B') => void }) {
+  project = project || (projectId ? getProject(projectId) : null);
   if (!project) return <section className="display-live-panel display-empty"><div><span className="display-slot">SLOT {slot}</span><h2>Waiting for a project</h2><p>Scan a project QR on the paired phone and send it here.</p></div></section>;
   const details = project.details!;
   const readings = feed?.readings || details.readings;
@@ -33,7 +33,8 @@ export default function DisplayController() {
   const [connected, setConnected] = useState(false);
   const [pairUrl, setPairUrl] = useState('');
   const [relayDisplayUrl, setRelayDisplayUrl] = useState('http://localhost:3002');
-  const projects = useMemo(() => [slots.A, slots.B].filter(Boolean).map(id => getProject(id!)).filter(Boolean) as Project[], [slots]);
+  const [projectMap, setProjectMap] = useState<Record<string, Project>>({});
+  const projects = useMemo(() => [slots.A, slots.B].filter(Boolean).map(id => projectMap[id!] || getProject(id!)).filter(Boolean) as Project[], [projectMap, slots]);
 
   useEffect(() => {
     setRelayDisplayUrl(relayUrl(''));
@@ -44,6 +45,14 @@ export default function DisplayController() {
     }).catch(() => { if (!cancelled) setError('Relay offline. Start exhibition mode with npm run exhibition.'); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    const ids = [slots.A, slots.B].filter(Boolean) as string[];
+    if (!ids.length) return;
+    Promise.all(ids.map(id => relayRequest<Project>(`/projects/${encodeURIComponent(id)}`).then(project => [id, project] as const).catch(() => null))).then(results => {
+      setProjectMap(current => Object.fromEntries([...Object.entries(current), ...results.filter(Boolean) as [string, Project][]]));
+    });
+  }, [slots]);
 
   useEffect(() => {
     if (!token) return;
@@ -66,7 +75,7 @@ export default function DisplayController() {
     <section className="display-console-head"><div><div className="display-eyebrow">Two project showcase</div><h1>Live project display</h1><p>Pair a phone, then send any scanned project to Slot A or Slot B.</p></div>{pairUrl && <div className="pair-card"><img src={qrImageUrl(pairUrl)} alt="Pair phone with this display" /><div><strong>Pair a phone</strong><small>Scan once, then scan project QR cards</small></div></div>}</section>
     {error && <div className="display-alert"><RefreshCw size={15} /> {error}</div>}
     <div className="display-console-actions"><button className="display-small-button" onClick={swap}><ArrowLeftRight size={14} /> Swap slots</button><span>{projects.length} project{projects.length === 1 ? '' : 's'} active · simulated live feeds</span></div>
-    <div className="display-live-columns"><Panel slot="A" projectId={slots.A} feed={slots.A ? feeds[slots.A] : undefined} clear={clear} /><Panel slot="B" projectId={slots.B} feed={slots.B ? feeds[slots.B] : undefined} clear={clear} /></div>
+    <div className="display-live-columns"><Panel slot="A" projectId={slots.A} project={slots.A ? projectMap[slots.A] : null} feed={slots.A ? feeds[slots.A] : undefined} clear={clear} /><Panel slot="B" projectId={slots.B} project={slots.B ? projectMap[slots.B] : null} feed={slots.B ? feeds[slots.B] : undefined} clear={clear} /></div>
     <footer>Phone and display must use the same Wi‑Fi · Relay: {relayDisplayUrl}</footer>
   </main>;
 }

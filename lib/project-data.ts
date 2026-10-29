@@ -2,6 +2,8 @@ export type ProjectMember = { name: string; role: string };
 export type ProjectReading = { label: string; value: string; note: string };
 export type ProjectMedia = { photos: string[]; documents: { title: string; url: string }[]; videos: { title: string; url: string }[] };
 export type ProjectLiveState = { readings: ProjectReading[]; state: 'ready' | 'running' | 'paused' | 'warning' | 'offline'; updatedAt: string };
+export type DashboardMetric = { label: string; unit?: string; source?: string; color?: string };
+export type ProjectDashboard = { template?: 'cards' | 'gauge' | 'table'; title?: string; metrics?: DashboardMetric[] };
 export type ProjectDetail = {
   members: ProjectMember[];
   readings: ProjectReading[];
@@ -11,7 +13,7 @@ export type ProjectDetail = {
   media?: ProjectMedia;
   live?: ProjectLiveState;
 };
-export type Project = { id: string; name: string; category: string; team: string; status: string; progress: number; summary: string; dataMode?: 'presentation' | 'live'; details?: ProjectDetail };
+export type Project = { id: string; name: string; category: string; team: string; status: string; progress: number; summary: string; dataMode?: 'presentation' | 'live'; report?: Record<string, string>; dashboard?: ProjectDashboard; fallback?: { active: boolean; mode?: string; reason?: string; activated_at?: number }; details?: ProjectDetail };
 
 export const defaultProjects: Project[] = [
   { id:'CX-101', name:'BioBots — Interactive Human Anatomy', category:'STEM exhibition', team:'Astra team', status:'In development', progress:78, summary:'An interactive anatomy exhibit with guided learning stations.' },

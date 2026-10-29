@@ -1,5 +1,5 @@
 export function saveLocal<T>(key: string, value: T) {
-  if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(value));
+  if (typeof window !== 'undefined') { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage is optional for this local-first prototype */ } }
 }
 
 export function loadLocal<T>(key: string, fallback: T): T {

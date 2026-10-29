@@ -6,9 +6,11 @@
     "dev": "next dev",
     "dev:display": "next dev -p 3001",
     "exhibition": "node scripts/run-exhibition.js",
+    "backend": "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000",
     "auto-push": "powershell -ExecutionPolicy Bypass -File scripts/auto-push.ps1",
     "build": "next build",
     "start": "next start",
+    "test:relay": "node scripts/test-relay.js",
     "log:activity": "powershell -ExecutionPolicy Bypass -File scripts/log-activity.ps1"
   },
   "dependencies": {

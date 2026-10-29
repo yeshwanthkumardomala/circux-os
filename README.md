@@ -1,5 +1,13 @@
 # Circux OS
 
+## Repository and project handoff
+
+GitHub repository: https://github.com/yeshwanthkumardomala/circux-os
+
+Full development history, architecture, setup, security notes, testing, and future work: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+
+For the simplest Windows launch, double-click [RUN-CIRCUX.bat](RUN-CIRCUX.bat). It starts the local FastAPI backend and LAN-accessible frontend. The launcher asks for `CIRCUX_ADMIN_TOKEN`; this is a private local secret and is intentionally not stored in GitHub.
+
 Circux OS is a locally runnable showcase and administration prototype for robotics, electronics, STEM projects, documentation, exhibitions, simulated monitoring, and judging.
 
 ## Run locally
@@ -16,6 +24,8 @@ For a complete exhibition session with the app, LAN relay, pairing QR, and simul
 ```bash
 npm run exhibition
 ```
+
+The FastAPI backend foundation can be started separately with `npm run backend` on port `8000`. The existing Node relay remains available for the current display pairing flow while the device API is migrated.
 
 Open `http://localhost:3000/display` on the large display. Scan its pairing QR with a phone, then scan any project QR and choose Slot A or Slot B. The relay runs on port `3002` and keeps the two-slot session in memory.
 
@@ -42,7 +52,9 @@ npm run build
 npm start
 ```
 
-The prototype is frontend-only. Project records, reports, uploads, telemetry, power states, and judge actions are simulated in browser state; no hardware, backend, cloud service, or shared database is connected. Browser-local state is suitable for a prototype, not a multi-user production system. Uploaded files are registered by name only and are not sent to a server.
+The workspace remains browser-first: reports, uploads, telemetry, power states, and judge actions are local or simulated. The exhibition relay is a small in-memory backend for sharing projects/config with display phones; it is not a persistent production database. Uploaded files are registered by name only and are not sent to a server.
+
+The exhibition relay now provides a small shared backend for project/config sync and optional hardware testing. See `HARDWARE.md`; hardware commands require `CIRCUX_DEVICE_KEY` and an adapter URL, and the relay must remain on a trusted network.
 
 ## Review notes
 
