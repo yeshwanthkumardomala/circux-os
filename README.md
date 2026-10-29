@@ -18,6 +18,7 @@ A modern workspace for organizing robotics projects, presenting student innovati
 ![TypeScript](https://img.shields.io/badge/TypeScript-Typed-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-Styling-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![CI](https://github.com/yeshwanthkumardomala/circux-os/actions/workflows/ci.yml/badge.svg)
 
 </div>
 
@@ -98,6 +99,8 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 | Direct hardware control | Requires a configured adapter and testing |
 
 ## 🔐 Security & Data Notes
+
+See [SECURITY.md](SECURITY.md) for safe deployment guidance and vulnerability reporting.
 
 - Project records, report drafts, settings, and judging data use browser-local storage.
 - Exhibition relay state is held in memory and resets when the relay stops.
