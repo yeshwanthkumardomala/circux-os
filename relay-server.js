@@ -130,7 +130,12 @@ const server = http.createServer(async (req, res) => {
       if (!requireAdmin(req, res)) return;
       const item = uploads.find(upload => upload.id === parts[2]);
       if (!item) return json(res, 404, { error: 'Upload not found' });
-      res.writeHead(200, { 'Content-Type': item.type, 'Cache-Control': 'no-store' });
+      res.writeHead(200, {
+        'Content-Type': item.type,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(item.name)}`,
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-store',
+      });
       return res.end(store.readUpload(item.id));
     }
     if (req.method === 'POST' && url.pathname === '/uploads') {
