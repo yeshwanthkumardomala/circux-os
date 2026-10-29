@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, ArrowRight } from 'lucide-react';
 import { defaultProjects, type Project } from '../../lib/project-data';
 import { loadLocal } from '../../lib/storage';
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export default function GlobalProjectSearch({ projects, onSelect, placeholder = 'Search all projects, teams, IDs…', compact = false }: Props) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [localProjects, setLocalProjects] = useState<Project[]>(projects || defaultProjects);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -56,6 +58,7 @@ export default function GlobalProjectSearch({ projects, onSelect, placeholder = 
   const choose = (project: Project) => {
     setQuery('');
     if (onSelect) onSelect(project);
+    else router.push('/project/' + encodeURIComponent(project.id));
   };
 
   return (
@@ -66,6 +69,7 @@ export default function GlobalProjectSearch({ projects, onSelect, placeholder = 
           aria-label="Search all projects"
           aria-expanded={Boolean(query.trim())}
           aria-controls="global-project-search-results"
+          aria-activedescendant={results[activeIndex] ? `global-project-result-${results[activeIndex].id}` : undefined}
           aria-autocomplete="list"
           role="combobox"
           value={query}
@@ -90,9 +94,9 @@ export default function GlobalProjectSearch({ projects, onSelect, placeholder = 
           {results.length ? results.map((project, index) => {
             const content = <><strong>{project.name}</strong><small>{project.id} · {project.team} · {project.category} · {project.status}</small></>;
             return onSelect ? (
-              <button key={project.id} type="button" role="option" aria-selected={index === activeIndex} className={index === activeIndex ? 'active' : ''} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(project)}>{content}</button>
+              <button id={`global-project-result-${project.id}`} key={project.id} type="button" role="option" aria-selected={index === activeIndex} className={index === activeIndex ? 'active' : ''} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(project)}>{content}</button>
             ) : (
-              <Link key={project.id} role="option" aria-selected={index === activeIndex} className={index === activeIndex ? 'active' : ''} href={'/project/' + encodeURIComponent(project.id)} onMouseEnter={() => setActiveIndex(index)} onClick={() => setQuery('')}>{content}<ArrowRight size={13} aria-hidden="true" /></Link>
+              <Link id={`global-project-result-${project.id}`} key={project.id} role="option" aria-selected={index === activeIndex} className={index === activeIndex ? 'active' : ''} href={'/project/' + encodeURIComponent(project.id)} onMouseEnter={() => setActiveIndex(index)} onClick={() => setQuery('')}>{content}<ArrowRight size={13} aria-hidden="true" /></Link>
             );
           }) : <p role="status">No matching projects. Try a project ID, team, category, or keyword.</p>}
         </div>
