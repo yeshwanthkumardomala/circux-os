@@ -29,8 +29,14 @@ function setCors(req, res) {
   try {
     const parsed = new URL(origin);
     const requestHost = String(req.headers.host || '').split(':')[0];
-    const allowed = process.env.CIRCUX_ALLOWED_ORIGIN || (parsed.hostname === requestHost && ['3000', '3001'].includes(parsed.port));
-    if (allowed === true || allowed === origin) res.setHeader('Access-Control-Allow-Origin', origin);
+    const configured = (process.env.CIRCUX_ALLOWED_ORIGIN || '').split(',').map(value => value.trim()).filter(Boolean);
+    const allowed = configured.length
+      ? configured.includes(origin)
+      : parsed.hostname === requestHost && ['3000', '3001'].includes(parsed.port);
+    if (allowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
   } catch { }
 }
 
