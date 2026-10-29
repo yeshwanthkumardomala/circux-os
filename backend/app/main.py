@@ -51,7 +51,7 @@ def startup() -> None:
 
 
 def require_admin(authorization: str | None = Header(default=None)) -> str:
-    if not ADMIN_TOKEN or authorization != f"Bearer {ADMIN_TOKEN}":
+    if not ADMIN_TOKEN or not secrets.compare_digest(authorization or "", f"Bearer {ADMIN_TOKEN}"):
         raise HTTPException(401, "Admin authentication required")
     return "admin"
 
@@ -104,7 +104,7 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/config")
-def get_config() -> dict[str, Any]:
+def get_config(actor: str = Depends(require_admin)) -> dict[str, Any]:
     with db() as connection:
         rows = connection.execute("SELECT key, value FROM config").fetchall()
     return {row["key"]: json.loads(row["value"]) for row in rows}
@@ -167,7 +167,7 @@ def register_board(input: BoardInput, actor: str = Depends(require_admin)) -> di
     data = input.model_dump(exclude={"token"})
     data["status"] = "registered"
     with db() as connection:
-        connection.execute("INSERT INTO boards(id,project_id,token_hash,data,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET project_id=excluded.project_id, data=excluded.data, updated_at=excluded.updated_at", (input.id, input.project_id, hashlib.sha256(token.encode()).hexdigest(), json.dumps(data), time.time()))
+        connection.execute("INSERT INTO boards(id,project_id,token_hash,data,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET project_id=excluded.project_id, token_hash=excluded.token_hash, data=excluded.data, updated_at=excluded.updated_at", (input.id, input.project_id, hashlib.sha256(token.encode()).hexdigest(), json.dumps(data), time.time()))
     audit("board.registered", actor, {"board_id": input.id})
     return {**data, "token": token}
 
@@ -240,6 +240,8 @@ async def upload(file: UploadFile = File(...), actor: str = Depends(require_admi
 
 @app.get("/api/uploads/{upload_id}")
 def download_upload(upload_id: str, actor: str = Depends(require_admin)) -> FileResponse:
+    if not upload_id or any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for character in upload_id):
+        raise HTTPException(400, "Invalid upload id")
     path = UPLOAD_DIR / upload_id
     if not path.is_file():
         raise HTTPException(404, "Upload not found")
@@ -248,6 +250,10 @@ def download_upload(upload_id: str, actor: str = Depends(require_admin)) -> File
 
 @app.websocket("/api/ws/projects/{project_id}")
 async def project_socket(websocket: WebSocket, project_id: str) -> None:
+    supplied_token = websocket.query_params.get("token", "")
+    if not ADMIN_TOKEN or not secrets.compare_digest(supplied_token, ADMIN_TOKEN):
+        await websocket.close(code=1008, reason="Admin authentication required")
+        return
     await websocket.accept()
     try:
         while True:
