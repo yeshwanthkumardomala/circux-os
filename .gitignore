@@ -1,5 +1,30 @@
+# Node / Next.js
 node_modules/
 .next/
-.circux-data/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local Circux data and uploads
+.circux-data/
+
+# Logs and OS/editor files
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
