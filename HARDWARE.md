@@ -10,6 +10,8 @@ $env:CIRCUX_DEVICE_KEY = 'replace-with-a-long-random-secret'
 npm run exhibition
 ```
 
+The FastAPI admin token is separate from `CIRCUX_DEVICE_KEY` and each board's device token. Set `CIRCUX_ADMIN_TOKEN` in the repository-root `.env` file. On Windows, `RUN-CIRCUX.bat` creates a random token when needed, saves it to `.env`, and prints it in the launch window. Use that admin token in the browser prompt and Board Health screen. Keep the launch window private.
+
 For a fixed browser origin, set `CIRCUX_ALLOWED_ORIGIN` as well. Without it, the relay accepts browser requests only from the same host on ports 3000 or 3001.
 
 The adapter must provide:

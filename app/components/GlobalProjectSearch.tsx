@@ -27,7 +27,7 @@ export default function GlobalProjectSearch({ projects, onSelect, placeholder = 
       setLocalProjects(projects);
       return;
     }
-    setLocalProjects(loadLocal<Project[]>('circux-projects', defaultProjects));
+    setLocalProjects(loadLocal<Project[]>('circux-projects', defaultProjects).filter(project => !project.hidden));
   }, [projects]);
 
   const results = useMemo(() => searchProjects(localProjects, query), [localProjects, query]);

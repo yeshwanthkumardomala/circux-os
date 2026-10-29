@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, BookOpen, CircuitBoard, ExternalLink, Images, Play, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { defaultProjects, getProject, type Project } from '../../../lib/project-data';
-import { relayRequest } from '../../../lib/relay';
+import { relayFetch } from '../../../lib/relay';
 import { loadLocal } from '../../../lib/storage';
 import QrCard from '../../components/QrCard';
 import DisplayActions from '../../components/DisplayActions';
@@ -16,9 +16,21 @@ export default function ProjectDetailClient({ id, initialProject }: { id: string
   const [loaded, setLoaded] = useState(Boolean(initialProject));
 
   useEffect(() => {
-    relayRequest<Project>(`/projects/${encodeURIComponent(id)}`).then(setProject).catch(() => {
+    relayFetch(`/projects/${encodeURIComponent(id)}`).then(async response => {
+      if (response.status === 404) {
+        const issue = await response.json().catch(() => null);
+        const local = loadLocal<Project[]>('circux-projects', defaultProjects).find(item => item.id === id);
+        const fallback = issue?.hidden ? null : local || getProject(id);
+        setProject(fallback?.hidden ? null : fallback);
+        return;
+      }
+      if (!response.ok) throw new Error('Project service unavailable');
+      const remote = await response.json() as Project;
+      setProject(remote.hidden ? null : remote);
+    }).catch(() => {
       const local = loadLocal<Project[]>('circux-projects', defaultProjects).find(item => item.id === id);
-      setProject(local || getProject(id));
+      const fallback = local || getProject(id);
+      setProject(fallback?.hidden ? null : fallback);
     }).finally(() => setLoaded(true));
   }, [id]);
 

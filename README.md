@@ -6,6 +6,8 @@
 
 **Build. Showcase. Evaluate.**
 
+Logo by **sidya.v05** · Developed by **Yeshwanthkumardomala**
+
 A modern workspace for organizing robotics projects, presenting student innovations, and managing STEM exhibitions — from project documentation to QR-powered display workflows.
 
 <p>
@@ -44,8 +46,8 @@ The following preview is captured from the public Vercel deployment. It may refr
 
 | Feature | What it does |
 | --- | --- |
-| **Project Workspace** | Organize project details, teams, categories, status, and summaries, with global project search. |
-| **Project Documentation** | Present project stories, circuit information, media links, and report drafts. |
+| **Project Workspace** | Organize, edit, hide/show, and delete project records, teams, categories, status, and summaries. |
+| **Project Documentation** | Save report drafts, project stories, circuit information, and project file/link references. |
 | **QR Project Access** | Open project details from scannable QR cards. |
 | **Display Pairing** | Pair a phone with an exhibition display over a local network. |
 | **Dual-Project Showcase** | Present two projects in Slot A and Slot B, with clear and swap controls. |
@@ -106,7 +108,7 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 | QR project pages | Built-in examples work online; custom projects need the local relay on the same reachable network |
 | Reports and settings | Saved in browser storage and synced to the local relay when available |
 | Judging | Saved to the authenticated relay; browser-local fallback when offline |
-| Uploads | File contents are stored by the local relay on the event computer; filenames alone are retained if it is offline |
+| Uploads | File contents are stored by the local relay under `.circux-data/uploads/<project-id>/`; offline browser fallback retains filenames only |
 | Sensor telemetry | Not configured; saved values are reference data and no synthetic feed is generated |
 | Cloud database/API | Not connected; Vercel currently hosts the frontend only |
 | Relay authentication | Shared admin token protects relay reads and mutations; user roles are not implemented |
@@ -117,6 +119,7 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 See [SECURITY.md](SECURITY.md) for safe deployment guidance and vulnerability reporting.
 
 - The local relay persists projects, settings, judging, and upload metadata in `.circux-data/store.json`; upload bytes are stored under `.circux-data/uploads`.
+- Project external links are saved with project records; uploaded files are organized in per-project folders.
 - Display pairing sessions remain in memory and expire after the configured inactivity timeout.
 - Browser-local storage is an offline fallback and does not synchronize between browsers without the relay.
 - The Vercel site has no configured relay URL or database environment variables; use the local exhibition workflow for shared event data.
@@ -139,6 +142,10 @@ CI verifies type checking, relay smoke/security tests, search coverage, producti
 ## Functional mode update (October 2026)
 
 The workspace now loads and syncs project/config records through the local relay, supports selecting a project in Showcase, Documentation, and Judging, and displays actual relay/device availability. The relay no longer emits synthetic sensor readings. Reference values in starter project records are not live telemetry.
+
+The Projects page includes edit, hide/show, and delete actions. Settings includes light/dark theme controls. Missing project details remain empty instead of borrowing readings from another project. The loading screen shows the Circux and sidya.v05 logos, and the site credits sidya.v05 and Yeshwanthkumardomala.
+
+For Windows, `RUN-CIRCUX.bat` creates a random `CIRCUX_ADMIN_TOKEN` when one is not configured, saves it in the ignored `.env` file, and prints it in the launch terminal. Use that value when the browser prompts or Board Health asks for an admin API token. This is different from a board/device token. The local FastAPI docs are at `http://localhost:8000/docs` while the backend is running.
 
 To point a browser build at a relay reachable by its users, set `NEXT_PUBLIC_CIRCUX_RELAY_URL` at build time and allow the frontend origin in `CIRCUX_ALLOWED_ORIGIN`. Do not point the public Vercel site at a private LAN address. Supabase is active, but currently has no application tables; Vercel has no database/backend environment configured. Shared cloud persistence is therefore unavailable. Use the local exhibition server for shared event data on the venue LAN.
 

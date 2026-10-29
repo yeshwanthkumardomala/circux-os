@@ -6,5 +6,5 @@ export default function Splash() {
   const [visible, setVisible] = useState(true);
   useEffect(() => { const timer = window.setTimeout(() => setVisible(false), 1500); return () => window.clearTimeout(timer); }, []);
   if (!visible) return null;
-  return <div className="splash" aria-label="Loading Circux OS"><div className="splash-logo">C</div><div className="splash-name">Circux <small>SHOWCASE OS</small></div></div>;
+  return <div className="splash" role="status" aria-label="Loading Circux OS"><div className="splash-brands"><div className="splash-logo" aria-label="Circux">C</div><span className="splash-divider" aria-hidden="true">×</span><img className="splash-partner-logo" src="/sidya-logo.jpeg" alt="Sidya v05 logo" /></div><div className="splash-name">Circux <small>SHOWCASE OS</small></div><div className="splash-credit">Logo by sidya.v05 <span>·</span> Developed by Yeshwanthkumardomala</div></div>;
 }

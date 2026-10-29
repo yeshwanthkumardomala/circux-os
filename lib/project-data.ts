@@ -13,7 +13,7 @@ export type ProjectDetail = {
   media?: ProjectMedia;
   live?: ProjectLiveState;
 };
-export type Project = { id: string; name: string; category: string; team: string; status: string; progress: number; summary: string; dataMode?: 'presentation' | 'live'; report?: Record<string, string>; dashboard?: ProjectDashboard; fallback?: { active: boolean; mode?: string; reason?: string; activated_at?: number }; details?: ProjectDetail };
+export type Project = { id: string; name: string; category: string; team: string; status: string; progress: number; summary: string; hidden?: boolean; dataMode?: 'presentation' | 'live'; report?: Record<string, string>; dashboard?: ProjectDashboard; fallback?: { active: boolean; mode?: string; reason?: string; activated_at?: number }; details?: ProjectDetail };
 
 export const defaultProjects: Project[] = [
   { id:'CX-101', name:'BioBots — Interactive Human Anatomy', category:'STEM exhibition', team:'Astra team', status:'In development', progress:78, summary:'An interactive anatomy exhibit with guided learning stations.' },
@@ -26,20 +26,9 @@ export const defaultProjects: Project[] = [
   { id:'CX-108', name:'Pipeline Inspection Robot', category:'Robotics', team:'Mechanica', status:'Review', progress:88, summary:'A project report and judging-ready inspection demonstration.' },
 ];
 
-const sampleDetails: ProjectDetail = {
-  members: [{ name: 'Aarav Mehta', role: 'Hardware lead' }, { name: 'Diya Rao', role: 'Software and presentation' }, { name: 'Kabir Singh', role: 'Testing and documentation' }],
-  readings: [{ label: 'Soil moisture', value: '64%', note: 'Illustrative FC-28 reading' }, { label: 'Temperature', value: '27.4°C', note: 'Illustrative DHT11 reading' }, { label: 'Pump state', value: 'Ready', note: 'No physical relay connected' }],
-  documents: ['Project abstract', 'System architecture', 'Testing evidence', 'Safety and limitations'],
-  circuit: 'Arduino Uno → FC-28 soil sensor → control logic → relay module → pump. This diagram is a presentation sample and must be checked before wiring.',
-  video: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  media: {
-    photos: ['https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=900&q=80', 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=900&q=80'],
-    documents: [{ title: 'Project abstract', url: '#' }, { title: 'System architecture', url: '#' }, { title: 'Safety and limitations', url: '#' }],
-    videos: [{ title: 'Development walkthrough', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }],
-  },
-};
+const emptyDetails: ProjectDetail = { members: [], readings: [], documents: [], circuit: '', video: '', media: { photos: [], documents: [], videos: [] } };
 
 export function getProject(id: string, projects: Project[] = defaultProjects) {
   const project = projects.find(item => item.id === id);
-  return project ? { ...project, details: project.details || sampleDetails } : null;
+  return project ? { ...project, details: project.details || emptyDetails } : null;
 }

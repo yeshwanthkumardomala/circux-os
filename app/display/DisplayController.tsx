@@ -13,7 +13,7 @@ type Feed = { readings: ProjectReading[]; state: string; updatedAt: string };
 function Panel({ slot, projectId, project, feed, clear }: { slot: 'A' | 'B'; projectId: string | null; project?: Project | null; feed?: Feed; clear: (slot: 'A' | 'B') => void }) {
   project = project || (projectId ? getProject(projectId) : null);
   if (!project) return <section className="display-live-panel display-empty"><div><span className="display-slot">SLOT {slot}</span><h2>Waiting for a project</h2><p>Scan a project QR on the paired phone and send it here.</p></div></section>;
-  const details = project.details!;
+  const details = project.details || { members: [], readings: [], documents: [], circuit: '', video: '', media: { photos: [], documents: [], videos: [] } };
   const readings = feed?.readings || details.readings;
   return <section className="display-live-panel">
     <div className="display-panel-top"><span className="display-slot">SLOT {slot} · {project.id}</span><button className="display-small-button" onClick={() => clear(slot)}><Trash2 size={14} /> Clear</button></div>

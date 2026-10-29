@@ -26,13 +26,15 @@ const deviceKey = process.env.CIRCUX_DEVICE_KEY;
 const adminToken = process.env.CIRCUX_ADMIN_TOKEN || '';
 
 function requireAdmin(req, res) {
+  if (isAdmin(req)) return true;
+  json(res, 401, { error: 'Admin authentication required. Configure CIRCUX_ADMIN_TOKEN and enter it in the browser when prompted.' });
+  return false;
+}
+
+function isAdmin(req) {
   const supplied = Buffer.from(String(req.headers.authorization || ''));
   const expected = Buffer.from(`Bearer ${adminToken}`);
-  if (!adminToken || supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
-    json(res, 401, { error: 'Admin authentication required. Configure CIRCUX_ADMIN_TOKEN and enter it in the browser when prompted.' });
-    return false;
-  }
-  return true;
+  return Boolean(adminToken) && supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
 }
 
 function persist() { store.save({ projects: Object.fromEntries(projects), config: workspaceConfig, judging, uploads }); }
@@ -140,43 +142,49 @@ const server = http.createServer(async (req, res) => {
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store',
       });
-      return res.end(store.readUpload(item.id));
+      return res.end(store.readUpload(item.id, item.projectId));
     }
     if (req.method === 'POST' && url.pathname === '/uploads') {
       if (!requireAdmin(req, res)) return;
       const input = await readBody(req, 14 * 1024 * 1024);
       if (typeof input.name !== 'string' || !input.name.trim() || typeof input.data !== 'string') return json(res, 400, { error: 'name and data are required' });
       if (input.name.length > 200) return json(res, 400, { error: 'name must be 200 characters or fewer' });
+      if (input.projectId && (typeof input.projectId !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(input.projectId) || !projects.has(input.projectId))) return json(res, 400, { error: 'projectId must match an existing project' });
       const id = crypto.randomUUID();
       const encoded = input.data.replace(/^data:[^;]+;base64,/, '');
       if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) return json(res, 400, { error: 'data must contain valid base64 file content' });
       const buffer = Buffer.from(encoded, 'base64');
       if (buffer.length > 10 * 1024 * 1024) return json(res, 413, { error: 'file is too large' });
-      store.writeUpload(id, buffer);
-      const record = { id, name: input.name.slice(0, 200), type: typeof input.type === 'string' && /^[\w.+-]+\/[\w.+-]+$/.test(input.type) ? input.type : 'application/octet-stream', size: buffer.length, createdAt: new Date().toISOString() };
+      store.writeUpload(id, buffer, input.projectId);
+      const record = { id, name: input.name.slice(0, 200), type: typeof input.type === 'string' && /^[\w.+-]+\/[\w.+-]+$/.test(input.type) ? input.type : 'application/octet-stream', size: buffer.length, projectId: input.projectId || null, createdAt: new Date().toISOString() };
       uploads.push(record); persist(); return json(res, 201, record);
     }
     if (req.method === 'DELETE' && parts[0] === 'uploads' && parts[1]) {
       if (!requireAdmin(req, res)) return;
       const index = uploads.findIndex(item => item.id === parts[1]);
       if (index < 0) return json(res, 404, { error: 'Upload not found' });
-      store.removeUpload(uploads[index].id); uploads.splice(index, 1); persist(); return json(res, 200, { ok: true });
+      store.removeUpload(uploads[index].id, uploads[index].projectId); uploads.splice(index, 1); persist(); return json(res, 200, { ok: true });
     }
     if (req.method === 'PUT' && url.pathname === '/projects') {
       if (!requireAdmin(req, res)) return;
       const input = await readBody(req, 1024 * 1024);
       if (!Array.isArray(input.projects)) return json(res, 400, { error: 'projects must be an array' });
-      projects.clear();
+      const nextProjects = new Map();
       input.projects.forEach(project => {
         if (!project || typeof project.id !== 'string' || typeof project.name !== 'string') throw new Error('Each project needs an id and name');
-        projects.set(project.id, project);
+        nextProjects.set(project.id, project);
       });
+      for (const upload of uploads) if (upload.projectId && !nextProjects.has(upload.projectId)) { store.moveUpload(upload.id, upload.projectId, null); upload.projectId = null; }
+      projects.clear();
+      nextProjects.forEach((project, id) => projects.set(id, project));
       persist();
       return json(res, 200, { count: projects.size });
     }
     if (req.method === 'GET' && parts[0] === 'projects' && parts[1]) {
       const project = projects.get(decodeURIComponent(parts[1]));
-      return project ? json(res, 200, project) : json(res, 404, { error: 'Project not found' });
+      if (!project) return json(res, 404, { error: 'Project not found' });
+      if (project.hidden && !isAdmin(req)) return json(res, 404, { error: 'Project hidden', hidden: true });
+      return json(res, 200, project);
     }
     if (req.method === 'PUT' && parts[0] === 'projects' && parts[1]) {
       if (!requireAdmin(req, res)) return;

@@ -2,9 +2,17 @@
 setlocal
 cd /d "%~dp0"
 
+if "%CIRCUX_ADMIN_TOKEN%"=="" if exist ".env" (
+  for /f "tokens=1,* delims==" %%A in ('findstr /b /c:"CIRCUX_ADMIN_TOKEN=" ".env"') do set "CIRCUX_ADMIN_TOKEN=%%B"
+)
+
 if "%CIRCUX_ADMIN_TOKEN%"=="" (
   for /f "delims=" %%T in ('powershell -NoProfile -Command "$bytes = New-Object byte[] 32; $rng = [Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($bytes); [BitConverter]::ToString($bytes).Replace('-', '')"') do set "CIRCUX_ADMIN_TOKEN=%%T"
 )
+if "%CIRCUX_ADMIN_TOKEN%"=="replace-with-a-long-random-token" (
+  for /f "delims=" %%T in ('powershell -NoProfile -Command "$bytes = New-Object byte[] 32; $rng = [Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($bytes); [BitConverter]::ToString($bytes).Replace('-', '')"') do set "CIRCUX_ADMIN_TOKEN=%%T"
+)
+powershell -NoProfile -Command "$p='.env'; $lines=@(Get-Content $p -ErrorAction SilentlyContinue | Where-Object { $_ -notmatch '^CIRCUX_ADMIN_TOKEN=' }); $lines += 'CIRCUX_ADMIN_TOKEN=' + $env:CIRCUX_ADMIN_TOKEN; [System.IO.File]::WriteAllLines($p,$lines,[System.Text.UTF8Encoding]::new($false))"
 echo Circux admin token for this session: %CIRCUX_ADMIN_TOKEN%
 echo Keep this token private. The browser will ask for it when accessing protected features.
 

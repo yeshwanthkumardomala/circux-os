@@ -36,6 +36,12 @@ async function waitForRelay() {
     if (projectListDenied.status !== 401) throw new Error('Unauthenticated project list was readable');
     const project = { id: 'TEST-1', name: 'Relay test project', team: 'Test team', category: 'Test', status: 'Ready', progress: 100, summary: 'Test project' };
     await request('/projects', { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ projects: [project] }) });
+    await request('/projects/TEST-1', { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ ...project, hidden: true }) });
+    const hiddenPublic = await fetch(base + '/projects/TEST-1');
+    if (hiddenPublic.status !== 404) throw new Error('Hidden project was exposed publicly');
+    if (!(await hiddenPublic.json()).hidden) throw new Error('Hidden project response did not identify its visibility state');
+    if (!(await request('/projects/TEST-1', { headers: { Authorization: 'Bearer test-admin-token' } })).hidden) throw new Error('Admin could not retrieve a hidden project');
+    await request('/projects/TEST-1', { method: 'PUT', headers: adminHeaders, body: JSON.stringify(project) });
     for (const path of ['/config', '/judging', '/uploads', '/device/readings']) {
       const denied = await fetch(base + path);
       if (denied.status !== 401) throw new Error(`Protected endpoint ${path} returned ${denied.status} without admin auth`);
@@ -46,12 +52,12 @@ async function waitForRelay() {
     if (configDenied.status !== 401) throw new Error('Config read was not protected');
     const config = await request('/config', { headers: { Authorization: 'Bearer test-admin-token' } });
     if (!config.slotA) throw new Error('Authorized config read failed');
-    const uploaded = await request('/uploads', { method: 'POST', headers: adminHeaders, body: JSON.stringify({ name: 'test.txt', type: 'text/plain', data: 'dGVzdA==' }) });
+    const uploaded = await request('/uploads', { method: 'POST', headers: adminHeaders, body: JSON.stringify({ name: 'test.txt', type: 'text/plain', data: 'dGVzdA==', projectId: 'TEST-1' }) });
+    if (uploaded.projectId !== 'TEST-1' || !fs.existsSync(path.join(dataDir, 'uploads', 'TEST-1', uploaded.id))) throw new Error('Upload was not stored in its project folder');
     const download = await fetch(base + `/uploads/file/${uploaded.id}`, { headers: { Authorization: 'Bearer test-admin-token' } });
     if (!download.ok || await download.text() !== 'test') throw new Error('Authenticated upload download failed');
     const deleteDenied = await fetch(base + `/uploads/${uploaded.id}`, { method: 'DELETE' });
     if (deleteDenied.status !== 401) throw new Error('Unauthenticated upload delete was accepted');
-    await request(`/uploads/${uploaded.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer test-admin-token' } });
     const stored = await request('/projects/TEST-1');
     if (stored.name !== project.name) throw new Error('Project sync failed');
     const projectList = await request('/projects', { headers: { Authorization: 'Bearer test-admin-token' } });
@@ -76,6 +82,12 @@ async function waitForRelay() {
     if (hardwareDisabled.status !== 403) throw new Error('Hardware command was not disabled by default');
     const judgingDenied = await fetch(base + '/judging', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: 'TEST-1', scores: [] }) });
     if (judgingDenied.status !== 401) throw new Error('Unauthenticated judging write was accepted');
+    await request('/projects', { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ projects: [] }) });
+    const unassigned = (await request('/uploads', { headers: { Authorization: 'Bearer test-admin-token' } })).find(item => item.id === uploaded.id);
+    if (!unassigned || unassigned.projectId !== null || !fs.existsSync(path.join(dataDir, 'uploads', '_unassigned', uploaded.id))) throw new Error('Project deletion did not retain and unassign its uploaded file');
+    const retainedDownload = await fetch(base + `/uploads/file/${uploaded.id}`, { headers: { Authorization: 'Bearer test-admin-token' } });
+    if (!retainedDownload.ok || await retainedDownload.text() !== 'test') throw new Error('Unassigned upload could not be downloaded after project deletion');
+    await request(`/uploads/${uploaded.id}`, { method: 'DELETE', headers: adminHeaders });
     console.log('Relay smoke test passed');
   } finally {
     relay.kill();
