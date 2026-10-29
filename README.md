@@ -38,7 +38,7 @@ The following preview is captured from the public Vercel deployment. It may refr
 
 ![CIRCUX OS live deployment screenshot](https://image.thum.io/get/width/1200/crop/900/noanimate/https://circux-os.vercel.app/)
 
-> Mobile UI note: telemetry and hardware controls are explicitly labelled as simulated when no hardware is connected. A global project search is available from the workspace header.
+> Mobile UI note: saved project readings are labelled as reference data. Live telemetry and physical controls stay unavailable until a verified hardware adapter is configured. A global project search is available from the workspace header.
 
 ## ✦ Core Features
 
@@ -50,7 +50,7 @@ The following preview is captured from the public Vercel deployment. It may refr
 | **Display Pairing** | Pair a phone with an exhibition display over a local network. |
 | **Dual-Project Showcase** | Present two projects in Slot A and Slot B, with clear and swap controls. |
 | **Judging Workflow** | Record and display project evaluation scores. |
-| **Telemetry Demonstrations** | Display sample readings and status information for demonstrations. |
+| **Project readings** | Display saved reference values; live telemetry requires connected hardware. |
 
 ## ⟡ Technology Stack
 
@@ -88,7 +88,7 @@ Open **http://localhost:3000** in your browser.
 
 First copy `.env.example` to `.env`, then edit the file and set a long random `CIRCUX_ADMIN_TOKEN`. The relay reads `.env` automatically. Keep `.env` private and do not commit it.
 
-For the local app, exhibition relay, QR pairing, and demonstration feeds, run:
+For the local app, authenticated exhibition relay, QR pairing, uploads, judging, and display pairing, run:
 
 ```bash
 npm run exhibition
@@ -102,23 +102,25 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 
 | Capability | Current status |
 | --- | --- |
-| Project workspace and showcase | Available in the prototype |
-| QR project pages and display pairing | Available in the local exhibition workflow |
-| Judging and browser-local settings | Prototype functionality |
-| Sensor telemetry | Demonstration / simulated data |
-| Persistent cloud database | Not connected |
-| Production authentication | Not implemented; admin token protects selected relay endpoints only |
-| Direct hardware control | Disabled by default; requires a configured adapter, explicit opt-in, and physical safety testing |
+| Project workspace and showcase | Functional locally; project/config sync to the authenticated relay when reachable |
+| QR project pages | Built-in examples work online; custom projects need the local relay on the same reachable network |
+| Reports and settings | Saved in browser storage and synced to the local relay when available |
+| Judging | Saved to the authenticated relay; browser-local fallback when offline |
+| Uploads | File contents are stored by the local relay on the event computer; filenames alone are retained if it is offline |
+| Sensor telemetry | Not configured; saved values are reference data and no synthetic feed is generated |
+| Cloud database/API | Not connected; Vercel currently hosts the frontend only |
+| Relay authentication | Shared admin token protects relay reads and mutations; user roles are not implemented |
+| Direct hardware control | Disabled by default and out of scope for this update |
 
 ## 🔐 Security & Data Notes
 
 See [SECURITY.md](SECURITY.md) for safe deployment guidance and vulnerability reporting.
 
-- Project records, report drafts, settings, and judging data use browser-local storage.
-- Exhibition relay state is held in memory and resets when the relay stops.
-- Uploaded files are registered by name; this workflow does not upload their contents.
+- The local relay persists projects, settings, judging, and upload metadata in `.circux-data/store.json`; upload bytes are stored under `.circux-data/uploads`.
+- Display pairing sessions remain in memory and expire after the configured inactivity timeout.
+- Browser-local storage is an offline fallback and does not synchronize between browsers without the relay.
+- The Vercel site has no configured relay URL or database environment variables; use the local exhibition workflow for shared event data.
 - Keep device keys and admin tokens private. Do not commit secrets to the repository.
-- Use the relay only on a trusted network and configure hardware adapters before enabling device commands.
 
 ## 🚀 Production-readiness checklist
 
@@ -132,7 +134,13 @@ Before using this with real students, judges, or devices:
 - [ ] Test upload limits, recovery, rate limiting, and backup/restore procedures.
 - [ ] Validate every hardware command with a physical interlock and fail-safe state.
 
-CI verifies type checking, relay smoke/security tests, production build, and Python backend tests. A green CI run does not itself prove that Vercel environment variables, external services, or physical hardware are configured correctly.
+CI verifies type checking, relay smoke/security tests, search coverage, production build, and Python backend tests. A green CI run does not itself prove that Vercel environment variables, external services, or physical hardware are configured correctly.
+
+## Functional mode update (October 2026)
+
+The workspace now loads and syncs project/config records through the local relay, supports selecting a project in Showcase, Documentation, and Judging, and displays actual relay/device availability. The relay no longer emits synthetic sensor readings. Reference values in starter project records are not live telemetry.
+
+To point a browser build at a relay reachable by its users, set `NEXT_PUBLIC_CIRCUX_RELAY_URL` at build time and allow the frontend origin in `CIRCUX_ALLOWED_ORIGIN`. Do not point the public Vercel site at a private LAN address. Supabase is active, but currently has no application tables; Vercel has no database/backend environment configured. Shared cloud persistence is therefore unavailable. Use the local exhibition server for shared event data on the venue LAN.
 
 ## 🧭 Roadmap
 

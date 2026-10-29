@@ -1,4 +1,6 @@
 export function relayUrl(path: string) {
+  const configured = process.env.NEXT_PUBLIC_CIRCUX_RELAY_URL?.replace(/\/$/, '');
+  if (configured) return `${configured}${path}`;
   if (typeof window === 'undefined') return `http://localhost:3002${path}`;
   return `${window.location.protocol}//${window.location.hostname}:3002${path}`;
 }

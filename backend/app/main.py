@@ -107,7 +107,7 @@ class ConfigInput(BaseModel):
 
 class FallbackInput(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
-    mode: str = Field(default="last-trusted", pattern="^(last-trusted|simulated)$")
+    mode: str = Field(default="saved-project", pattern="^saved-project$")
 
 
 @app.get("/api/health")
@@ -222,7 +222,7 @@ def history(board_id: str, limit: int = 100, actor: str = Depends(require_admin)
 @app.post("/api/projects/{project_id}/fallback")
 def activate_fallback(project_id: str, input: FallbackInput, actor: str = Depends(require_admin)) -> dict[str, Any]:
     project = get_project(project_id)
-    project["fallback"] = {"active": True, "mode": input.mode, "reason": input.reason, "activated_at": time.time(), "source": "last-trusted" if input.mode == "last-trusted" else "simulated"}
+    project["fallback"] = {"active": True, "mode": input.mode, "reason": input.reason, "activated_at": time.time(), "source": "saved-project"}
     save_project(ProjectInput(id=project_id, name=project["name"], project=project), actor=actor)
     audit("project.fallback.enabled", actor, {"project_id": project_id, "reason": input.reason})
     return project["fallback"]
@@ -273,8 +273,9 @@ async def project_socket(websocket: WebSocket, project_id: str) -> None:
         while True:
             try:
                 project = get_project(project_id)
-            except HTTPException:
-                project = {"id": project_id, "fallback": {"active": True, "source": "simulated"}}
+            except HTTPException as error:
+                await websocket.close(code=4404, reason=str(error.detail))
+                return
             await websocket.send_json(project)
             await __import__("asyncio").sleep(2)
     except WebSocketDisconnect:

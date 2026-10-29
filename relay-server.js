@@ -94,6 +94,7 @@ const server = http.createServer(async (req, res) => {
   const parts = url.pathname.split('/').filter(Boolean);
   try {
     if (req.method === 'GET' && url.pathname === '/health') return json(res, 200, { ok: true, sessions: sessions.size });
+    if (req.method === 'GET' && url.pathname === '/projects') { if (!requireAdmin(req, res)) return; return json(res, 200, [...projects.values()]); }
     if (req.method === 'GET' && url.pathname === '/network') {
       const interfaces = os.networkInterfaces();
       const hosts = Object.values(interfaces).flat().filter(item => item && item.family === 'IPv4' && !item.internal).map(item => item.address);
@@ -108,7 +109,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, workspaceConfig);
     }
     if (req.method === 'GET' && url.pathname === '/device/health') {
-      if (!deviceUrl) return json(res, 200, { configured: false, connected: false, mode: 'simulation' });
+      if (!deviceUrl) return json(res, 200, { configured: false, connected: false, mode: 'not-configured' });
       try { return json(res, 200, { configured: true, connected: true, mode: 'hardware', ...(await deviceRequest('/health')) }); } catch (error) { return json(res, 200, { configured: true, connected: false, mode: 'hardware', error: error.message }); }
     }
     if (req.method === 'GET' && url.pathname === '/device/readings') { if (!requireAdmin(req, res)) return; return json(res, 200, await deviceRequest('/readings')); }
@@ -232,17 +233,7 @@ setInterval(() => {
     if (Date.now() - item.lastActivity > SESSION_TTL) {
       item.clients.forEach(client => client.end());
       sessions.delete(item.token);
-      return;
     }
-    if (workspaceConfig.autoDemo === false) return;
-    [...new Set([item.slots.A, item.slots.B].filter(Boolean))].forEach(projectId => {
-      const tick = Math.round(Date.now() / 1500);
-      touch(item, { type: 'feed:update', projectId, state: 'running', readings: [
-        { label: 'Signal', value: `${50 + (tick % 18)}%`, note: 'Simulated relay feed' },
-        { label: 'Temperature', value: `${(24 + (tick % 12) / 10).toFixed(1)}°C`, note: 'Simulated relay feed' },
-        { label: 'State', value: 'Running', note: 'Simulated relay feed' },
-      ] });
-    });
   });
 }, 1500);
 

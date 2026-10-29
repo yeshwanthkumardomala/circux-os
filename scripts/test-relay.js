@@ -32,6 +32,8 @@ async function waitForRelay() {
     const unauthenticatedWrite = await fetch(base + '/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projects: [] }) });
     if (unauthenticatedWrite.status !== 401) throw new Error('Unauthenticated project write was accepted');
     const adminHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer test-admin-token' };
+    const projectListDenied = await fetch(base + '/projects');
+    if (projectListDenied.status !== 401) throw new Error('Unauthenticated project list was readable');
     const project = { id: 'TEST-1', name: 'Relay test project', team: 'Test team', category: 'Test', status: 'Ready', progress: 100, summary: 'Test project' };
     await request('/projects', { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ projects: [project] }) });
     for (const path of ['/config', '/judging', '/uploads', '/device/readings']) {
@@ -52,12 +54,20 @@ async function waitForRelay() {
     await request(`/uploads/${uploaded.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer test-admin-token' } });
     const stored = await request('/projects/TEST-1');
     if (stored.name !== project.name) throw new Error('Project sync failed');
+    const projectList = await request('/projects', { headers: { Authorization: 'Bearer test-admin-token' } });
+    if (!projectList.some(item => item.id === project.id)) throw new Error('Project list failed');
     const session = await request('/session', { method: 'POST' });
     await request(`/session/${session.token}/slot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot: 'A', projectId: 'TEST-1' }) });
     const state = await request(`/session/${session.token}/state`);
     if (state.slots.A !== 'TEST-1') throw new Error('Slot update failed');
+    const events = await fetch(`${base}/session/${session.token}/events`);
+    const reader = events.body.getReader();
+    await reader.read();
+    const fakeFeed = await Promise.race([reader.read().then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 1800))]);
+    await reader.cancel();
+    if (fakeFeed) throw new Error('Relay emitted unverified sensor data');
     const hardware = await request('/device/health');
-    if (hardware.configured !== false || hardware.mode !== 'simulation') throw new Error('Hardware fallback failed');
+    if (hardware.configured !== false || hardware.mode !== 'not-configured') throw new Error('Hardware status is not truthful');
     const unauthorized = await fetch(base + '/device/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'wake' }) });
     if (unauthorized.status !== 401) throw new Error('Hardware command was not protected');
     const deviceOnly = await fetch(base + '/device/command', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Circux-Device-Key': 'test-device-key' }, body: JSON.stringify({ action: 'wake' }) });
