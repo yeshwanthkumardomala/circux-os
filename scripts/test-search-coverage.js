@@ -11,7 +11,9 @@ const requiredRoutes = [
   'app/offline/page.tsx',
 ];
 const componentPath = path.join(root, 'app/components/GlobalProjectSearch.tsx');
+const matcherPath = path.join(root, 'lib/project-search.ts');
 const component = fs.readFileSync(componentPath, 'utf8');
+const matcher = fs.readFileSync(matcherPath, 'utf8');
 for (const route of requiredRoutes) {
   const source = fs.readFileSync(path.join(root, route), 'utf8');
   if (!source.includes('GlobalProjectSearch')) {
@@ -20,5 +22,8 @@ for (const route of requiredRoutes) {
 }
 for (const feature of ['aria-label="Search all projects"', 'ArrowDown', 'ArrowUp', "event.key === 'Enter'", "event.key === 'Escape'", 'searchProjects(']) {
   if (!component.includes(feature)) throw new Error(`Global search is missing feature: ${feature}`);
+}
+for (const field of ['project.name', 'project.team', 'project.category', 'project.summary', 'project.id', 'project.status', 'query.trim()', 'toLocaleLowerCase()', 'slice(0, Math.floor(limit))']) {
+  if (!matcher.includes(field)) throw new Error(`Project search matching is missing: ${field}`);
 }
 console.log(`Search coverage passed: ${requiredRoutes.length} routes and keyboard/accessibility hooks verified.`);
