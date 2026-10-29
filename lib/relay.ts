@@ -15,10 +15,13 @@ export async function relayRequest<T>(path: string, init?: RequestInit) {
   let response = await fetch(relayUrl(path), { ...init, headers });
   const errorBody = response.status === 401 ? await response.clone().json().catch(() => null) : null;
   if (response.status === 401 && typeof window !== 'undefined' && /Admin authentication required/i.test(errorBody?.error || '')) {
-    const token = window.prompt('Enter the local Circux admin token configured as CIRCUX_ADMIN_TOKEN:');
-    if (token?.trim()) {
-      window.localStorage.setItem(ADMIN_TOKEN_KEY, token.trim());
-      headers.set('Authorization', `Bearer ${token.trim()}`);
+    let token = window.localStorage.getItem(ADMIN_TOKEN_KEY);
+    if (!token) {
+      token = window.prompt('Enter the local Circux admin token configured as CIRCUX_ADMIN_TOKEN:')?.trim() || null;
+      if (token) window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
+    }
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
       response = await fetch(relayUrl(path), { ...init, headers });
     }
   }
