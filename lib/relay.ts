@@ -5,9 +5,9 @@ export function relayUrl(path: string) {
 
 const ADMIN_TOKEN_KEY = 'circux-relay-admin-token';
 
-export async function relayRequest<T>(path: string, init?: RequestInit) {
+export async function relayFetch(path: string, init?: RequestInit) {
   const headers = new Headers(init?.headers || {});
-  headers.set('Content-Type', 'application/json');
+  if (init?.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   if (typeof window !== 'undefined') {
     const savedToken = window.localStorage.getItem(ADMIN_TOKEN_KEY);
     if (savedToken) headers.set('Authorization', `Bearer ${savedToken}`);
@@ -18,14 +18,22 @@ export async function relayRequest<T>(path: string, init?: RequestInit) {
     let token = window.localStorage.getItem(ADMIN_TOKEN_KEY);
     if (!token) {
       token = window.prompt('Enter the local Circux admin token configured as CIRCUX_ADMIN_TOKEN:')?.trim() || null;
-      if (token) window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
+      if (token) {
+        window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
+        window.localStorage.setItem('circux-admin-token', token);
+      }
     }
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
       response = await fetch(relayUrl(path), { ...init, headers });
     }
   }
-  if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || `Relay request failed (${response.status})`);
+  return response;
+}
+
+export async function relayRequest<T>(path: string, init?: RequestInit) {
+  const response = await relayFetch(path, init);
+  if (!response.ok) throw new Error((await response.clone().json().catch(() => null))?.error || `Relay request failed (${response.status})`);
   return response.json() as Promise<T>;
 }
 
