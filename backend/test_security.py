@@ -13,6 +13,10 @@ from backend.app import main  # noqa: E402
 
 
 class BackendSecurityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        main.init_db()
+
     def test_admin_token_is_required_and_compared(self):
         self.assertEqual(main.require_admin("Bearer test-admin-token"), "admin")
         with self.assertRaises(HTTPException) as missing:
