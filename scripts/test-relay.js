@@ -27,6 +27,8 @@ async function waitForRelay() {
     await waitForRelay();
     const cors = await fetch(base + '/health', { headers: { Origin: 'http://evil.example:3000' } });
     if (cors.headers.get('access-control-allow-origin')) throw new Error('Untrusted CORS origin was allowed');
+    const sameHostCors = await fetch(base + '/health', { headers: { Origin: 'http://127.0.0.1:3000' } });
+    if (sameHostCors.headers.get('access-control-allow-origin') !== 'http://127.0.0.1:3000') throw new Error('Same-host exhibition CORS origin was rejected');
     const unauthenticatedWrite = await fetch(base + '/projects', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projects: [] }) });
     if (unauthenticatedWrite.status !== 401) throw new Error('Unauthenticated project write was accepted');
     const adminHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer test-admin-token' };
