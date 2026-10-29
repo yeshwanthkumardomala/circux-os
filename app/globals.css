@@ -112,3 +112,33 @@ button { cursor:pointer; }
   .settings-actions { display:block; }
   .settings-actions .actions { display:grid; grid-template-columns:1fr; margin-top:14px; }
 }
+
+
+/* Global project search: shared by workspace and standalone project/display routes. */
+.global-search { min-width: 0; }
+.global-search .search { max-width: none; width: 100%; }
+.global-search-results { z-index: 100; }
+.global-search-results a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 7px; color: var(--ink); text-decoration: none; }
+.global-search-results a > strong, .global-search-results button > strong { font-size: 12px; line-height: 1.4; }
+.global-search-results a > small, .global-search-results button > small { display: block; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.global-search-results a:hover, .global-search-results a.active, .global-search-results button:hover, .global-search-results button.active { background: var(--bg); outline: none; }
+.global-search-results a:focus-visible, .global-search-results button:focus-visible, .global-search input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.global-search-compact { width: min(320px, 34vw); flex: 0 1 320px; }
+.public-search-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.public-search-row .global-search { width: min(440px, 100%); }
+.display-header .global-search-compact { margin-left: auto; margin-right: 14px; }
+.display-header .global-search-compact .search input { background: #12213a; color: #e7edf7; border-color: #263650; }
+.display-header .global-search-compact .search input::placeholder { color: #9aa9bd; }
+.display-header .global-search-compact .search svg { color: #9aa9bd; }
+.display-header .global-search-results { background: #12213a; color: #e7edf7; border-color: #263650; }
+.display-header .global-search-results a { color: #e7edf7; }
+.display-header .global-search-results a:hover, .display-header .global-search-results a.active { background: #1b2e4a; }
+@media (max-width: 720px) {
+  .topbar { gap: 8px; }
+  .topbar > .global-search { flex: 1 1 auto; min-width: 0; }
+  .global-search .search input { padding-right: 8px; font-size: 12px; }
+  .public-search-row { align-items: stretch; flex-direction: column; }
+  .public-search-row .global-search { width: 100%; }
+  .display-header .global-search-compact { width: min(46vw, 240px); margin: 0; flex: 1 1 140px; }
+  .display-header { flex-wrap: wrap; gap: 10px; }
+}
