@@ -32,10 +32,22 @@ async function waitForRelay() {
     const adminHeaders = { 'Content-Type': 'application/json', Authorization: 'Bearer test-admin-token' };
     const project = { id: 'TEST-1', name: 'Relay test project', team: 'Test team', category: 'Test', status: 'Ready', progress: 100, summary: 'Test project' };
     await request('/projects', { method: 'PUT', headers: adminHeaders, body: JSON.stringify({ projects: [project] }) });
+    for (const path of ['/config', '/judging', '/uploads', '/device/readings']) {
+      const denied = await fetch(base + path);
+      if (denied.status !== 401) throw new Error(`Protected endpoint ${path} returned ${denied.status} without admin auth`);
+    }
+    const uploadDenied = await fetch(base + '/uploads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'test.txt', data: 'dGVzdA==' }) });
+    if (uploadDenied.status !== 401) throw new Error('Unauthenticated upload was accepted');
     const configDenied = await fetch(base + '/config');
     if (configDenied.status !== 401) throw new Error('Config read was not protected');
     const config = await request('/config', { headers: { Authorization: 'Bearer test-admin-token' } });
     if (!config.slotA) throw new Error('Authorized config read failed');
+    const uploaded = await request('/uploads', { method: 'POST', headers: adminHeaders, body: JSON.stringify({ name: 'test.txt', type: 'text/plain', data: 'dGVzdA==' }) });
+    const download = await fetch(base + `/uploads/file/${uploaded.id}`, { headers: { Authorization: 'Bearer test-admin-token' } });
+    if (!download.ok || await download.text() !== 'test') throw new Error('Authenticated upload download failed');
+    const deleteDenied = await fetch(base + `/uploads/${uploaded.id}`, { method: 'DELETE' });
+    if (deleteDenied.status !== 401) throw new Error('Unauthenticated upload delete was accepted');
+    await request(`/uploads/${uploaded.id}`, { method: 'DELETE', headers: { Authorization: 'Bearer test-admin-token' } });
     const stored = await request('/projects/TEST-1');
     if (stored.name !== project.name) throw new Error('Project sync failed');
     const session = await request('/session', { method: 'POST' });
