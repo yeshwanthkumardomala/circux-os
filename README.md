@@ -11,6 +11,22 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+For a complete exhibition session with the app, LAN relay, pairing QR, and simulated live feeds, use one command:
+
+```bash
+npm run exhibition
+```
+
+Open `http://localhost:3000/display` on the large display. Scan its pairing QR with a phone, then scan any project QR and choose Slot A or Slot B. The relay runs on port `3002` and keeps the two-slot session in memory.
+
+Use `http://localhost:3000/qr-test` to test three scannable project QR cards. For phones, open the LAN-IP version of that URL so the QR links are reachable over Wi‑Fi.
+
+To automatically commit and push changes every 15 minutes, run this in a separate terminal. It waits 15 minutes before the first push:
+
+```bash
+npm run auto-push
+```
+
 For the large judge display, run a second process in another terminal:
 
 ```bash
@@ -35,4 +51,28 @@ The prototype is frontend-only. Project records, reports, uploads, telemetry, po
 - The materials audit remains available as supporting data, but the main UI is intentionally showcase-first rather than a materials catalog.
 - Project QR cards open mobile detail pages with sample team, readings, documentation, circuit, and development-video content.
 - The QR image is fetched from a small online QR image service in this frontend-only phase; the project URL itself remains local to the event Wi-Fi.
-- Phone-to-screen switching is simulated locally until a backend relay is added.
+- Phone-to-screen switching is available over the local relay during `npm run exhibition`; the relay is intended for a trusted event Wi-Fi and resets when it stops.
+
+## Current work context
+
+Work completed in the current session:
+
+- Initialized Git and pushed the Circux OS prototype to `https://github.com/yeshwanthkumardomala/circux-os.git` on branch `main`.
+- Added a LAN relay on port `3002` using native Node HTTP and Server-Sent Events.
+- Added display pairing by QR, phone-to-display project selection, Slot A / Slot B control, clear, and swap actions.
+- Added a two-project display with project story, photos, documents, videos, simulated live readings, status, and update times.
+- Added the three-project QR test bench at `/qr-test` for CX-101, CX-102, and CX-103.
+- Added `npm run exhibition` to start the Next app and relay together.
+- Added `npm run auto-push`, which waits 15 minutes before its first commit/push and repeats on a 15-minute interval.
+- Fixed LAN QR generation so a display opened through `localhost` advertises the reachable Wi-Fi address instead of giving phones an unusable `localhost` link.
+- Fixed hydration errors caused by host-dependent QR and relay URLs being different during server rendering and browser hydration.
+
+Latest verified LAN test URLs on the current Wi-Fi:
+
+- Display: `http://10.14.231.177:3000/display`
+- QR test bench: `http://10.14.231.177:3000/qr-test`
+- Relay health: `http://10.14.231.177:3002/health`
+
+Verification completed: production build passed before the final hydration-only fix, TypeScript checking passed after it, the display, project, pairing, and QR test routes returned HTTP 200, and relay session/slot updates were tested successfully.
+
+Known limits: project data and relay state are still in memory/browser storage; live readings are simulated; media uses URLs; no hardware, authentication, cloud database, or persistent event history is connected.

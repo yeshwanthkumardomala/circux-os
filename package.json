@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:display": "next dev -p 3001",
+    "exhibition": "node scripts/run-exhibition.js",
+    "auto-push": "powershell -ExecutionPolicy Bypass -File scripts/auto-push.ps1",
     "build": "next build",
     "start": "next start",
     "log:activity": "powershell -ExecutionPolicy Bypass -File scripts/log-activity.ps1"
