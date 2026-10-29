@@ -13,7 +13,7 @@ Circux OS is currently a local-first STEM exhibition prototype. It includes a br
 - The Node relay requires `CIRCUX_ADMIN_TOKEN` for workspace configuration, project writes, judging records, and upload access. The browser prompts for this token and stores it in that browser's local storage; use it only on a trusted device.
 - Keep `/session/{token}` links private: session tokens grant control over paired display slots until they expire.
 - Use the FastAPI admin token only where that API's authorization is enforced. Review relay routes separately before using the system with untrusted clients.
-- Keep hardware adapters in sensor-only mode until command authorization, physical safety interlocks, and failure behavior have been tested.
+- Hardware commands require both the relay admin token and device key, and are disabled unless `CIRCUX_ENABLE_HARDWARE_COMMANDS=true`. Keep this setting `false` until physical safety interlocks and failure behavior have been independently tested.
 - Back up `.circux-data` securely and restrict access to stored uploads and local database files.
 - Rotate any credential that may have been exposed.
 
