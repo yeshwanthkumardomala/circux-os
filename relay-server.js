@@ -12,6 +12,15 @@ const uploads = store.data.uploads || [];
 const SESSION_TTL = Number(process.env.CIRCUX_SESSION_TTL_MS || 4 * 60 * 60 * 1000);
 const deviceUrl = process.env.CIRCUX_DEVICE_URL?.replace(/\/$/, '');
 const deviceKey = process.env.CIRCUX_DEVICE_KEY;
+const adminToken = process.env.CIRCUX_ADMIN_TOKEN || '';
+
+function requireAdmin(req, res) {
+  if (!adminToken || req.headers.authorization !== `Bearer ${adminToken}`) {
+    json(res, 401, { error: 'Admin authentication required. Configure CIRCUX_ADMIN_TOKEN and enter it in the browser when prompted.' });
+    return false;
+  }
+  return true;
+}
 
 function persist() { store.save({ projects: Object.fromEntries(projects), config: workspaceConfig, judging, uploads }); }
 function setCors(req, res) {
@@ -60,7 +69,7 @@ async function deviceRequest(path, init = {}) {
 const server = http.createServer(async (req, res) => {
   setCors(req, res);
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, { 'Access-Control-Allow-Headers': 'Content-Type, X-Circux-Device-Key', 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,OPTIONS' });
+    res.writeHead(204, { 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Circux-Device-Key', 'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,OPTIONS' });
     return res.end();
   }
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -72,8 +81,9 @@ const server = http.createServer(async (req, res) => {
       const hosts = Object.values(interfaces).flat().filter(item => item && item.family === 'IPv4' && !item.internal).map(item => item.address);
       return json(res, 200, { host: hosts[0] || 'localhost', hosts });
     }
-    if (req.method === 'GET' && url.pathname === '/config') return json(res, 200, workspaceConfig);
+    if (req.method === 'GET' && url.pathname === '/config') { if (!requireAdmin(req, res)) return; return json(res, 200, workspaceConfig); }
     if (req.method === 'PUT' && url.pathname === '/config') {
+      if (!requireAdmin(req, res)) return;
       const input = await readBody(req);
       workspaceConfig = { ...workspaceConfig, ...input };
       persist();
@@ -90,21 +100,24 @@ const server = http.createServer(async (req, res) => {
       if (!['wake', 'restart', 'power-off'].includes(input.action)) return json(res, 400, { error: 'action must be wake, restart, or power-off' });
       return json(res, 200, await deviceRequest('/command', { method: 'POST', body: JSON.stringify({ action: input.action }) }));
     }
-    if (req.method === 'GET' && url.pathname === '/judging') return json(res, 200, judging);
+    if (req.method === 'GET' && url.pathname === '/judging') { if (!requireAdmin(req, res)) return; return json(res, 200, judging); }
     if (req.method === 'POST' && url.pathname === '/judging') {
+      if (!requireAdmin(req, res)) return;
       const input = await readBody(req, 32 * 1024);
       if (typeof input.projectId !== 'string' || !Array.isArray(input.scores)) return json(res, 400, { error: 'projectId and scores are required' });
       const record = { id: crypto.randomUUID(), ...input, createdAt: new Date().toISOString() };
       judging.push(record); persist(); return json(res, 201, record);
     }
-    if (req.method === 'GET' && url.pathname === '/uploads') return json(res, 200, uploads);
+    if (req.method === 'GET' && url.pathname === '/uploads') { if (!requireAdmin(req, res)) return; return json(res, 200, uploads); }
     if (req.method === 'GET' && parts[0] === 'uploads' && parts[1] === 'file' && parts[2]) {
+      if (!requireAdmin(req, res)) return;
       const item = uploads.find(upload => upload.id === parts[2]);
       if (!item) return json(res, 404, { error: 'Upload not found' });
       res.writeHead(200, { 'Content-Type': item.type, 'Cache-Control': 'no-store' });
       return res.end(store.readUpload(item.id));
     }
     if (req.method === 'POST' && url.pathname === '/uploads') {
+      if (!requireAdmin(req, res)) return;
       const input = await readBody(req, 12 * 1024 * 1024);
       if (typeof input.name !== 'string' || typeof input.data !== 'string') return json(res, 400, { error: 'name and data are required' });
       const id = crypto.randomUUID();
@@ -115,11 +128,13 @@ const server = http.createServer(async (req, res) => {
       uploads.push(record); persist(); return json(res, 201, record);
     }
     if (req.method === 'DELETE' && parts[0] === 'uploads' && parts[1]) {
+      if (!requireAdmin(req, res)) return;
       const index = uploads.findIndex(item => item.id === parts[1]);
       if (index < 0) return json(res, 404, { error: 'Upload not found' });
       store.removeUpload(uploads[index].id); uploads.splice(index, 1); persist(); return json(res, 200, { ok: true });
     }
     if (req.method === 'PUT' && url.pathname === '/projects') {
+      if (!requireAdmin(req, res)) return;
       const input = await readBody(req, 1024 * 1024);
       if (!Array.isArray(input.projects)) return json(res, 400, { error: 'projects must be an array' });
       projects.clear();
@@ -135,6 +150,7 @@ const server = http.createServer(async (req, res) => {
       return project ? json(res, 200, project) : json(res, 404, { error: 'Project not found' });
     }
     if (req.method === 'PUT' && parts[0] === 'projects' && parts[1]) {
+      if (!requireAdmin(req, res)) return;
       const input = await readBody(req, 1024 * 1024);
       if (!input || typeof input.id !== 'string' || input.id !== decodeURIComponent(parts[1]) || typeof input.name !== 'string') return json(res, 400, { error: 'A matching project id and name are required' });
       projects.set(input.id, input); persist(); return json(res, 200, input);
@@ -199,4 +215,5 @@ setInterval(() => {
   });
 }, 1500);
 
-server.listen(port, '0.0.0.0', () => console.log(`Circux relay listening on http://0.0.0.0:${port}`));
+if (!adminToken) console.warn('CIRCUX_ADMIN_TOKEN is not set; protected relay routes will reject requests.');
+server.listen(port, process.env.CIRCUX_RELAY_HOST || '0.0.0.0', () => console.log(`Circux relay listening on port ${port}`));
