@@ -9,8 +9,8 @@ import { downloadFile, loadLocal, saveLocal, toCsv } from '../../lib/storage';
 type RecordItem = { id: string; projectId: string; scores: number[]; feedback: string; createdAt: string };
 const criteria: [string, number][] = [['Innovation', 25], ['Technical implementation', 25], ['Problem relevance', 20], ['Presentation', 15], ['Social or environmental impact', 15]];
 
-export default function JudgingPanel({ project }: { project: Project | null }) {
-  const active = project || { id: 'CX-104', name: 'Aqua Smart Irrigation' } as Project;
+export default function JudgingPanel({ project, projects = [] }: { project: Project | null; projects?: Project[]; onSelect?: (project: Project) => void }) {
+  const active = project || projects[0] || { id: 'CX-104', name: 'Aqua Smart Irrigation' } as Project;
   const [scores, setScores] = useState([20, 20, 15, 12, 12]);
   const [feedback, setFeedback] = useState('');
   const [records, setRecords] = useState<RecordItem[]>([]);
