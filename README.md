@@ -1,4 +1,4 @@
-###◈ Circux OS
+## ◈ Circux OS
 
 The Operating Workspace for STEM & Robotics
 
