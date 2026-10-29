@@ -2,6 +2,8 @@
 
 Repository: https://github.com/yeshwanthkumardomala/circux-os
 
+The repository is online and is the permanent code/documentation link. The running application is intentionally local because it must access the venue hotspot and hardware; GitHub is not the live backend host.
+
 ## 1. Purpose
 
 Circux OS is a local exhibition platform for student projects. It provides a dashboard, project builder, public QR pages, judge displays, phone-to-display pairing, documentation, uploads, judging, project monitoring, and a hardware-readings path.
