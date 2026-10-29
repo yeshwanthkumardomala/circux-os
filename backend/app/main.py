@@ -12,6 +12,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+# Read the repository-local .env file for direct uvicorn launches without overriding shell env.
+_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+if _ENV_FILE.is_file():
+    for _line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
+        _line = _line.strip()
+        if not _line or _line.startswith("#") or "=" not in _line:
+            continue
+        _key, _value = _line.split("=", 1)
+        _key, _value = _key.strip(), _value.strip()
+        if _key and _key.replace("_", "").isalnum() and _key[0].isalpha() and _key not in os.environ:
+            if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in ("'", '"'):
+                _value = _value[1:-1]
+            os.environ[_key] = _value
+
 DATA_DIR = Path(os.getenv("CIRCUX_DATA_DIR", ".circux-data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR = DATA_DIR / "uploads"
@@ -21,7 +35,7 @@ ADMIN_TOKEN = os.getenv("CIRCUX_ADMIN_TOKEN", "")
 MAX_UPLOAD = 10 * 1024 * 1024
 
 app = FastAPI(title="Circux Local API", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CIRCUX_ALLOWED_ORIGIN", "http://localhost:3000").split(","), allow_credentials=False, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type", "X-Device-Token"])
+app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in os.getenv("CIRCUX_ALLOWED_ORIGIN", "http://localhost:3000").split(",") if origin.strip()], allow_credentials=False, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type", "X-Device-Token"])
 
 
 def db() -> sqlite3.Connection:
