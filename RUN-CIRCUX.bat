@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 if "%CIRCUX_ADMIN_TOKEN%"=="" (
-  for /f "delims=" %%T in ('powershell -NoProfile -Command "[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))"') do set "CIRCUX_ADMIN_TOKEN=%%T"
+  for /f "delims=" %%T in ('powershell -NoProfile -Command "$bytes = New-Object byte[] 32; $rng = [Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($bytes); [BitConverter]::ToString($bytes).Replace('-', '')"') do set "CIRCUX_ADMIN_TOKEN=%%T"
 )
 echo Circux admin token for this session: %CIRCUX_ADMIN_TOKEN%
 echo Keep this token private. The browser will ask for it when accessing protected features.
