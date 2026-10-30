@@ -258,3 +258,69 @@ button { cursor:pointer; }
   .main { min-width:0; }
 }
 @media (prefers-reduced-motion: reduce) { .sidebar { transition:none; } }
+
+
+/* Mobile-first exhibition phone companion. */
+.phone-display-page { min-height:100vh; background:#f3f6fb; color:#17243a; padding:0 18px 26px; }
+.phone-display-top { width:min(760px,100%); min-height:68px; margin:auto; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #e1e8f1; }
+.phone-display-brand { display:flex; align-items:center; gap:10px; color:#12213a; text-decoration:none; font-size:12px; font-weight:800; letter-spacing:1.2px; }
+.phone-display-brand small { display:block; color:#718096; font-size:8px; letter-spacing:1.5px; margin-top:3px; }
+.phone-display-mark { display:grid; place-items:center; width:34px; height:34px; border-radius:11px; color:#fff; background:#2458d8; font-size:18px; }
+.phone-paired-status { display:flex; align-items:center; gap:7px; color:#16824f; font-size:11px; font-weight:700; background:#e8f7ef; padding:8px 11px; border-radius:99px; }
+.phone-paired-status i { width:7px; height:7px; border-radius:50%; background:#24a36a; }
+.phone-display-intro { width:min(760px,100%); margin:30px auto 22px; }
+.phone-display-icon { width:44px; height:44px; display:grid; place-items:center; border-radius:13px; color:#2458d8; background:#e6edff; }
+.phone-display-kicker { margin:16px 0 7px; color:#2458d8; font-size:10px; font-weight:800; letter-spacing:1.6px; }
+.phone-display-intro h1 { max-width:600px; margin:0; font-size:clamp(29px,6vw,43px); line-height:1.08; letter-spacing:-1.5px; }
+.phone-display-subtitle { max-width:570px; margin:11px 0 0; color:#66758b; font-size:13px; line-height:1.65; }
+.phone-connected-note { display:flex; align-items:center; gap:8px; width:fit-content; margin-top:16px; padding:9px 12px; border-radius:8px; color:#17784d; background:#e8f7ef; font-size:11px; font-weight:600; }
+.phone-display-state { width:min(760px,100%); min-height:190px; margin:22px auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:26px; border:1px solid #e1e8f1; border-radius:16px; background:#fff; text-align:center; color:#2458d8; }
+.phone-display-state strong { color:#17243a; font-size:15px; }
+.phone-display-state span { max-width:420px; color:#718096; font-size:12px; line-height:1.6; }
+.phone-display-error { color:#c47b18; }
+.phone-display-link { display:inline-flex; align-items:center; gap:4px; margin-top:8px; color:#2458d8; font-size:12px; font-weight:700; text-decoration:none; }
+.phone-spin { animation:phone-spin .9s linear infinite; }
+@keyframes phone-spin { to { transform:rotate(360deg); } }
+.phone-project-section { width:min(760px,100%); margin:24px auto 0; }
+.phone-project-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:15px; }
+.phone-project-heading h2 { margin:0; font-size:19px; letter-spacing:-.4px; }
+.phone-project-heading p { margin:4px 0 0; color:#718096; font-size:11px; }
+.phone-unpair { display:inline-flex; align-items:center; gap:6px; padding:9px 11px; border:1px solid #dce4ef; border-radius:8px; background:#fff; color:#596a81; font-size:11px; font-weight:600; }
+.phone-project-search { display:flex; align-items:center; gap:10px; min-height:48px; padding:0 13px; border:1px solid #dce4ef; border-radius:11px; background:#fff; color:#8492a6; }
+.phone-project-search input { flex:1; min-width:0; border:0; outline:0; background:transparent; color:#17243a; font-size:13px; }
+.phone-project-search input::placeholder { color:#9aa7b8; }
+.phone-project-search span { min-width:23px; padding:3px 6px; border-radius:6px; background:#f0f3f8; color:#718096; text-align:center; font-size:10px; }
+.phone-project-list { display:grid; gap:11px; margin-top:13px; }
+.phone-project-card { padding:16px; border:1px solid #e0e7f0; border-radius:13px; background:#fff; box-shadow:0 3px 12px #1a33500a; }
+.phone-project-card-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.phone-project-category { color:#2458d8; font-size:9px; font-weight:800; letter-spacing:1px; text-transform:uppercase; }
+.phone-project-id { color:#8492a6; font-size:10px; font-variant-numeric:tabular-nums; }
+.phone-project-card h3 { margin:8px 0 5px; color:#17243a; font-size:16px; line-height:1.3; letter-spacing:-.3px; }
+.phone-project-card > p { margin:0; color:#718096; font-size:11px; line-height:1.55; }
+.phone-project-card-bottom { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid #edf1f6; }
+.phone-project-card-bottom > span { min-width:0; overflow:hidden; color:#8492a6; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.phone-slot-actions { display:flex; gap:7px; flex:0 0 auto; }
+.phone-slot-actions button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-width:75px; min-height:39px; padding:8px 12px; border:1px solid #d5e0f3; border-radius:8px; background:#f5f8ff; color:#2458d8; font-size:11px; font-weight:800; }
+.phone-slot-actions button:last-child { border-color:#2458d8; background:#2458d8; color:#fff; }
+.phone-slot-actions button:disabled { opacity:.55; cursor:wait; }
+.phone-feedback { display:flex; align-items:flex-start; gap:9px; margin-top:12px; padding:11px 12px; border-radius:9px; font-size:11px; line-height:1.5; }
+.phone-feedback-success { background:#e8f7ef; color:#17784d; }
+.phone-feedback-error { background:#fff2e9; color:#a44f22; }
+.phone-no-projects { display:grid; justify-items:center; gap:7px; padding:38px 16px; border:1px dashed #d5deea; border-radius:12px; color:#8492a6; text-align:center; }
+.phone-no-projects strong { color:#17243a; font-size:13px; }
+.phone-no-projects span { font-size:11px; }
+.phone-display-footer { width:min(760px,100%); display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:26px auto 0; padding-top:14px; border-top:1px solid #e1e8f1; color:#8492a6; font-size:10px; line-height:1.5; }
+.phone-display-footer a { color:#2458d8; text-decoration:none; font-weight:700; }
+@media (max-width:560px) {
+  .phone-display-page { padding:0 13px 22px; }
+  .phone-display-top { min-height:60px; }
+  .phone-display-intro { margin:24px auto 18px; }
+  .phone-display-intro h1 { font-size:31px; }
+  .phone-display-subtitle { font-size:12px; }
+  .phone-project-heading h2 { font-size:18px; }
+  .phone-project-card { padding:14px; }
+  .phone-project-card-bottom { align-items:stretch; flex-direction:column; gap:10px; }
+  .phone-slot-actions { display:grid; grid-template-columns:1fr 1fr; width:100%; }
+  .phone-slot-actions button { min-height:44px; }
+  .phone-unpair { min-height:40px; }
+}
