@@ -139,6 +139,8 @@ See [SECURITY.md](SECURITY.md) for safe deployment guidance and vulnerability re
 
 ## 🚀 Production-readiness checklist
 
+See the detailed [production completion checklist](docs/PRODUCTION_COMPLETION_CHECKLIST.md) for the release gate and required cloud, search, upload, judging, display, and hardware verification.
+
 Before using this with real students, judges, or devices:
 
 - [x] Provision PostgreSQL, Auth, storage, RLS policies, and versioned schema migrations.
