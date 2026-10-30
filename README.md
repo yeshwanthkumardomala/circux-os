@@ -120,7 +120,7 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 | Uploads | Private Supabase Storage bucket, 10 MB cap, database metadata; local mode uses relay files |
 | Universal search | Authenticated RPC searches projects, members, documentation, judging, and display names under RLS |
 | Sensor telemetry | No fabricated live readings; physical board validation remains outstanding |
-| Hardware agent | Local FastAPI provides authenticated Arduino CLI detect/compile/upload and validates serial JSON telemetry; no physical board has been confirmed in this workspace |
+| Hardware agent | Local FastAPI provides authenticated board registration, Arduino CLI detect/compile/upload, readiness checks, and validated serial JSON telemetry; no physical board has been confirmed in this workspace |
 | Display pairing | Local relay/SSE and Supabase cloud pairing are implemented; deployed phone/display E2E is pending |
 | First administrator | Requires explicit operator promotion after signup; no default password is created |
 
@@ -210,7 +210,7 @@ Copy `.env.example` to `.env`, set the two `NEXT_PUBLIC_SUPABASE_*` values, then
 
 - Configure Supabase Auth redirect URLs and email confirmation for the Vercel domain.
 - Verify backups and run a restore drill; configure uploaded-file retention.
-- Add a FastAPI readiness endpoint and production monitoring/log retention.
+- Add structured backend monitoring/log retention and verify the FastAPI readiness endpoint at the venue.
 - Verify Arduino CLI against physical boards; add reader-specific RFID firmware/protocol support and test disconnect/safe-state behavior.
 - Run cloud end-to-end tests for signup, roles, project CRUD, reports, files, judging, and public QR pages.
 

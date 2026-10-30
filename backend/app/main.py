@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from backend.arduino_cli import ArduinoUnavailable, compile_sketch, detected_ports, run_cli, upload_sketch
-from backend.telemetry import validate_readings
+from backend.telemetry import admin_token_from_subprotocols, validate_readings, validate_sensor_metadata
 
 # Read the repository-local .env file for direct uvicorn launches without overriding shell env.
 _ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
@@ -147,6 +147,16 @@ def health() -> dict[str, Any]:
     return {"ok": True, "service": "circux-fastapi", "boards": boards}
 
 
+@app.get("/api/ready")
+def readiness() -> dict[str, Any]:
+    try:
+        with db() as connection:
+            connection.execute("SELECT 1").fetchone()
+    except sqlite3.Error as error:
+        raise HTTPException(503, "Local database is unavailable") from error
+    return {"ready": True, "database": "ok"}
+
+
 @app.get("/api/hardware/health")
 def arduino_health(actor: str = Depends(require_admin)) -> dict[str, Any]:
     try:
@@ -271,13 +281,15 @@ def heartbeat(board_id: str, x_device_token: str | None = Header(default=None)) 
 @app.post("/api/boards/{board_id}/readings")
 def readings(board_id: str, payload: dict[str, Any], x_device_token: str | None = Header(default=None)) -> dict[str, Any]:
     board = board_from_token(board_id, x_device_token)
-    try: validated = validate_readings(payload.get("readings"))
+    try:
+        validated = validate_readings(payload.get("readings"))
+        metadata = validate_sensor_metadata(payload)
     except ValueError as error: raise HTTPException(400, str(error)) from error
-    data = {"board_id": board_id, "readings": validated, "received_at": time.time()}
+    data = {"board_id": board_id, "readings": validated, **metadata, "received_at": time.time()}
     with db() as connection:
         connection.execute("INSERT INTO readings(board_id,data,created_at) VALUES(?,?,?)", (board_id, json.dumps(data), time.time()))
         board_data = json.loads(board["data"])
-        board_data.update({"status": "healthy", "last_seen": time.time(), "last_readings": data["readings"]})
+        board_data.update({"status": "healthy", "last_seen": data["received_at"], "last_reading_at": data["received_at"], "last_readings": data["readings"]})
         connection.execute("UPDATE boards SET data=?, updated_at=? WHERE id=?", (json.dumps(board_data), time.time(), board_id))
     return data
 
@@ -334,11 +346,12 @@ def download_upload(upload_id: str, actor: str = Depends(require_admin)) -> File
 
 @app.websocket("/api/ws/projects/{project_id}")
 async def project_socket(websocket: WebSocket, project_id: str) -> None:
-    supplied_token = websocket.query_params.get("token", "")
+    protocols = websocket.scope.get("subprotocols", [])
+    supplied_token = admin_token_from_subprotocols(protocols)
     if not ADMIN_TOKEN or not secrets.compare_digest(supplied_token, ADMIN_TOKEN):
         await websocket.close(code=1008, reason="Admin authentication required")
         return
-    await websocket.accept()
+    await websocket.accept(subprotocol="circux-admin" if "circux-admin" in protocols else None)
     try:
         while True:
             try:

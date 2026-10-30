@@ -54,6 +54,20 @@ class BackendSecurityTests(unittest.TestCase):
             main.enforce_hardware_rate_limit(request, "upload")
         self.assertEqual(limited.exception.status_code, 429)
 
+    def test_readiness_checks_local_database(self):
+        self.assertEqual(main.readiness(), {"ready": True, "database": "ok"})
+
+    def test_verified_reading_is_saved_with_board_timestamp(self):
+        board_id = "reading-" + uuid.uuid4().hex[:10]
+        main.register_board(main.BoardInput(id=board_id, name="Sensor board", token="sensor-token"), actor="admin")
+        result = main.readings(board_id, {"readings": [{"label": "Temperature", "value": 24.5, "unit": "C"}], "board_temperature": 31.2, "voltage": 5}, "sensor-token")
+        self.assertEqual(result["board_temperature"], 31.2)
+        self.assertEqual(result["readings"][0]["value"], 24.5)
+        self.assertGreater(result["received_at"], 0)
+        with self.assertRaises(HTTPException) as invalid:
+            main.readings(board_id, {"readings": [], "voltage": -1}, "sensor-token")
+        self.assertEqual(invalid.exception.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()
