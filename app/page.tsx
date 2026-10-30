@@ -31,6 +31,7 @@ function Sidebar({ page, setPage, role }: { page: Page; setPage: (p: Page) => vo
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopTimer = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; };
   const scheduleCollapse = () => { stopTimer(); timer.current = setTimeout(() => setExpanded(false), 5000); };
+  useEffect(() => { if (window.matchMedia('(max-width: 720px)').matches) setExpanded(false); }, []);
   useEffect(() => { if (expanded) scheduleCollapse(); else stopTimer(); return stopTimer; }, [expanded]);
   const interact = () => { if (!expanded) setExpanded(true); scheduleCollapse(); };
   const allowed = role === 'admin' || role === 'instructor' ? nav.map(item => item.label) : ['Overview', 'Projects', 'Documentation Studio', 'Showcase', 'Judging', 'Live Monitor'];
