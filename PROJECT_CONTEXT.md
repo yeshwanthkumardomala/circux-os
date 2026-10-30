@@ -16,7 +16,7 @@ This section supersedes older prototype/cloud-status notes later in this documen
 - Cloud project/report/settings/judging data and uploads persist in Supabase. There are no seeded sample projects in cloud mode.
 - Local FastAPI remains SQLite-backed on the venue computer; it is not the cloud database API. It offers authenticated board registration and Arduino CLI detect/compile/upload, a database readiness endpoint, and validated serial JSON telemetry. Board Health displays verified readings and heartbeat state. The serial firmware must emit reader data as JSON; no specific RFID reader has been physically validated.
 - Cloud display pairing polls Supabase; local exhibition mode still uses the Node relay/SSE.
-- Tests run in this implementation: TypeScript, global-search coverage, upload-policy guard, relay smoke, 15 Python unit tests, cloud-mode production build, and npm audit (zero vulnerabilities). Next.js 16 warns that React 18 support is deprecated; build remains successful.
+- Tests run in this implementation: TypeScript, global-search coverage, upload-policy guard, relay smoke, 16 Python unit tests, cloud-mode production build, and npm audit (zero vulnerabilities). Next.js 16 warns that React 18 support is deprecated; build remains successful.
 - Physical hardware validation is blocked by the current workstation reporting `No boards found.` Cloud signup/role-permission E2E flows also await the owner account and Supabase Auth redirect configuration.
 
 Current Supabase migrations are in `supabase/migrations/`; apply them in order for a new environment. Production verification, backup/restore drill, long-run load test, and the account-provisioned browser walkthrough remain open.
