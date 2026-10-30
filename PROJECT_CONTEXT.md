@@ -12,7 +12,7 @@ This section supersedes older prototype/cloud-status notes later in this documen
 
 - Vercel project `circux-os` has `NEXT_PUBLIC_SUPABASE_URL` and the Supabase publishable key configured for production, preview, and development. These are public browser values; RLS protects data. No service-role key is in the frontend.
 - Supabase project `pluvaeplyqvwoctnxowc` has PostgreSQL tables, RLS, Auth profile trigger, private Storage bucket, role policies, score validation, audit triggers, public project search, universal authenticated search, and capability-based cloud display pairing.
-- Sign-up creates a `viewer`. The first owner must sign up, then an operator must promote that account once in Supabase SQL Editor using the instructions in `README.md`. Afterward, account role changes are available in admin Settings.
+- Sign-up creates a `viewer`. The current deployment's initial administrator has been provisioned; new environments can use the bootstrap SQL in `README.md`. Afterward, account role changes are available in admin Settings.
 - Cloud project/report/settings/judging data and uploads persist in Supabase. There are no seeded sample projects in cloud mode.
 - Local FastAPI remains SQLite-backed on the venue computer; it is not the cloud database API. It offers authenticated board registration and Arduino CLI detect/compile/upload, a database readiness endpoint, and validated serial JSON telemetry. Board Health displays verified readings and heartbeat state. The serial firmware must emit reader data as JSON; no specific RFID reader has been physically validated.
 - Cloud display pairing polls Supabase; local exhibition mode still uses the Node relay/SSE.

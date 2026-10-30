@@ -191,8 +191,10 @@ Check the repository for a license file before reusing or redistributing this pr
 
 ## Cloud onboarding
 
-1. Open `https://circux-os.vercel.app/` and create an account. Confirm your email if Supabase Auth requires it.
-2. In Supabase SQL Editor, promote only the account you control (replace the email):
+The initial administrator for the current deployment is provisioned. Sign in with that account; new registrations remain viewers until an administrator changes their role. Roles are assigned by the database, not selected in the login form.
+
+1. Open `https://circux-os.vercel.app/` and sign in, or create an account. Confirm your email if Supabase Auth requires it.
+2. For a fresh Supabase project only, promote the account you control (replace the email):
 
    ```sql
    update public.profiles p set role = 'admin'
