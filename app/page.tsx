@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Activity, ArrowRight, BookOpen, Check, ChevronRight, Download, EyeOff, FileText, FolderOpen, LayoutDashboard, Moon, Play, Plus, Settings, Sparkles, Sun, Target, Trophy, Upload, X, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Activity, ArrowRight, BookOpen, Check, ChevronRight, Download, EyeOff, FileText, FolderOpen, LayoutDashboard, Menu, Moon, Play, Plus, Settings, Sparkles, Sun, Target, Trophy, Upload, X, Zap } from 'lucide-react';
 import { downloadFile, loadLocal, saveLocal } from '../lib/storage';
 import { defaultProjects, type Project } from '../lib/project-data';
 import { relayRequest, syncRelay } from '../lib/relay';
@@ -26,7 +26,21 @@ const nav: { label: Page; icon: typeof LayoutDashboard }[] = [['Overview', Layou
 function Btn({ children, primary = false, onClick, type = 'button' }: { children: React.ReactNode; primary?: boolean; onClick?: () => void; type?: 'button' | 'submit' }) { return <button type={type} onClick={onClick} className={'btn ' + (primary ? 'primary' : '')}>{children}</button>; }
 function Badge({ children, type = 'blue' }: { children: React.ReactNode; type?: 'green' | 'amber' | 'blue' | 'gray' }) { return <span className={'badge ' + type}>{children}</span>; }
 function Header({ page, admin, config, projects, openResult }: { page: Page; admin: string; config: WorkspaceConfig; projects: Project[]; openResult: (project: Project) => void }) { return <header className="topbar"><div className="crumb">{config.organization} / <strong>{page}</strong></div><GlobalProjectSearch projects={projects} onSelect={openResult} /><div className="top-actions"><span className="status"><span className="dot" /><span><strong>{config.eventName}</strong><small className="event-context">{config.venue} · {config.eventDate}</small></span></span><div className="avatar">{admin.slice(0, 2).toUpperCase()}</div></div></header>; }
-function Sidebar({ page, setPage, role }: { page: Page; setPage: (p: Page) => void; role: CircuxRole }) { const allowed = role === 'admin' || role === 'instructor' ? nav.map(item => item.label) : ['Overview', 'Projects', 'Documentation Studio', 'Showcase', 'Judging', 'Live Monitor']; return <aside className="sidebar"><div className="brand"><div className="logo">C</div><div><strong>Circux</strong><small>SHOWCASE OS</small></div></div><div className="nav-label">Workspace</div>{nav.filter(({label}) => allowed.includes(label)).map(({ label, icon: Icon }) => <button key={label} className={'nav-item ' + (page === label ? 'active' : '')} onClick={() => setPage(label)}><Icon size={16} /><span>{label}</span></button>)}<div className="sidebar-foot"><div className="demo-pill"><span className="dot" /> {supabaseConfigured ? 'CLOUD WORKSPACE' : 'LOCAL EVENT MODE'}</div><div>{supabaseConfigured ? 'Cloud records use authenticated database policies.' : 'Local workspace uses the venue relay when available.'}</div></div></aside>; }
+function Sidebar({ page, setPage, role }: { page: Page; setPage: (p: Page) => void; role: CircuxRole }) {
+  const [expanded, setExpanded] = useState(true);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopTimer = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; };
+  const scheduleCollapse = () => { stopTimer(); timer.current = setTimeout(() => setExpanded(false), 5000); };
+  useEffect(() => { if (expanded) scheduleCollapse(); else stopTimer(); return stopTimer; }, [expanded]);
+  const interact = () => { if (!expanded) setExpanded(true); scheduleCollapse(); };
+  const allowed = role === 'admin' || role === 'instructor' ? nav.map(item => item.label) : ['Overview', 'Projects', 'Documentation Studio', 'Showcase', 'Judging', 'Live Monitor'];
+  return <aside className={'sidebar ' + (expanded ? 'sidebar-expanded' : 'sidebar-collapsed')} onPointerMove={interact} onFocusCapture={interact} onClick={interact} onMouseEnter={() => { if (!expanded) setExpanded(true); }} onMouseLeave={scheduleCollapse} onTouchStart={() => { if (!expanded) setExpanded(true); scheduleCollapse(); }}>
+    <div className="brand"><button className="sidebar-toggle" type="button" aria-label={expanded ? 'Collapse navigation' : 'Expand navigation'} aria-expanded={expanded} onClick={event => { event.stopPropagation(); stopTimer(); setExpanded(value => !value); }}><Menu size={18} /></button><div className="logo">C</div><div className="brand-name"><strong>Circux</strong><small>SHOWCASE OS</small></div></div>
+    <div className="nav-label">Workspace</div>
+    {nav.filter(({label}) => allowed.includes(label)).map(({ label, icon: Icon }) => <button key={label} title={!expanded ? label : undefined} aria-label={label} className={'nav-item ' + (page === label ? 'active' : '')} onClick={() => { setPage(label); scheduleCollapse(); }}><Icon size={16} /><span>{label}</span></button>)}
+    <div className="sidebar-foot"><div className="demo-pill"><span className="dot" /> {supabaseConfigured ? 'CLOUD WORKSPACE' : 'LOCAL EVENT MODE'}</div><div>{supabaseConfigured ? 'Cloud records use authenticated database policies.' : 'Local workspace uses the venue relay when available.'}</div></div>
+  </aside>;
+}
 function PageHead({ eyebrow, title, text, children }: { eyebrow: string; title: string; text: string; children?: React.ReactNode }) { return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{text}</p></div><div className="actions">{children}</div></div>; }
 function Overview({ projects, setPage, open }: { projects: Project[]; setPage: (p: Page) => void; open: (p: Project) => void }) {
   const [judgingCount, setJudgingCount] = useState<number | null>(null);
