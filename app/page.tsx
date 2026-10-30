@@ -16,6 +16,9 @@ import OperationalStatus from './components/OperationalStatus';
 import GlobalProjectSearch from './components/GlobalProjectSearch';
 import AppearanceSettings from './components/AppearanceSettings';
 import AdminAccessInfo from './components/AdminAccessInfo';
+import UserAccessPanel from './components/UserAccessPanel';
+import AuthGate, { useCircuxAuth, type CircuxRole } from './components/AuthGate';
+import { localMode, supabase, supabaseConfigured } from '../lib/supabase-browser';
 
 type Page = 'Overview' | 'Projects' | 'Project Builder' | 'Documentation Studio' | 'Showcase' | 'Uploads' | 'Judging' | 'Live Monitor' | 'Power Manager' | 'Settings' | 'Board Health';
 const nav: { label: Page; icon: typeof LayoutDashboard }[] = [['Overview', LayoutDashboard], ['Projects', FolderOpen], ['Project Builder', Sparkles], ['Documentation Studio', BookOpen], ['Showcase', Target], ['Uploads', Upload], ['Judging', Trophy], ['Live Monitor', Activity], ['Power Manager', Zap], ['Board Health', Activity], ['Settings', Settings]].map(([label, icon]) => ({ label: label as Page, icon: icon as typeof LayoutDashboard }));
@@ -23,20 +26,27 @@ const nav: { label: Page; icon: typeof LayoutDashboard }[] = [['Overview', Layou
 function Btn({ children, primary = false, onClick, type = 'button' }: { children: React.ReactNode; primary?: boolean; onClick?: () => void; type?: 'button' | 'submit' }) { return <button type={type} onClick={onClick} className={'btn ' + (primary ? 'primary' : '')}>{children}</button>; }
 function Badge({ children, type = 'blue' }: { children: React.ReactNode; type?: 'green' | 'amber' | 'blue' | 'gray' }) { return <span className={'badge ' + type}>{children}</span>; }
 function Header({ page, admin, config, projects, openResult }: { page: Page; admin: string; config: WorkspaceConfig; projects: Project[]; openResult: (project: Project) => void }) { return <header className="topbar"><div className="crumb">{config.organization} / <strong>{page}</strong></div><GlobalProjectSearch projects={projects} onSelect={openResult} /><div className="top-actions"><span className="status"><span className="dot" /><span><strong>{config.eventName}</strong><small className="event-context">{config.venue} · {config.eventDate}</small></span></span><div className="avatar">{admin.slice(0, 2).toUpperCase()}</div></div></header>; }
-function Sidebar({ page, setPage }: { page: Page; setPage: (p: Page) => void }) { return <aside className="sidebar"><div className="brand"><div className="logo">C</div><div><strong>Circux</strong><small>SHOWCASE OS</small></div></div><div className="nav-label">Workspace</div>{nav.map(({ label, icon: Icon }) => <button key={label} className={'nav-item ' + (page === label ? 'active' : '')} onClick={() => setPage(label)}><Icon size={16} /><span>{label}</span></button>)}<div className="sidebar-foot"><div className="demo-pill"><span className="dot" /> FUNCTIONAL MODE</div><div>Projects, reports, and scores use local storage and relay sync when available; hardware is not configured.</div></div></aside>; }
+function Sidebar({ page, setPage, role }: { page: Page; setPage: (p: Page) => void; role: CircuxRole }) { const allowed = role === 'admin' || role === 'instructor' ? nav.map(item => item.label) : ['Overview', 'Projects', 'Documentation Studio', 'Showcase', 'Judging', 'Live Monitor']; return <aside className="sidebar"><div className="brand"><div className="logo">C</div><div><strong>Circux</strong><small>SHOWCASE OS</small></div></div><div className="nav-label">Workspace</div>{nav.filter(({label}) => allowed.includes(label)).map(({ label, icon: Icon }) => <button key={label} className={'nav-item ' + (page === label ? 'active' : '')} onClick={() => setPage(label)}><Icon size={16} /><span>{label}</span></button>)}<div className="sidebar-foot"><div className="demo-pill"><span className="dot" /> {supabaseConfigured ? 'CLOUD WORKSPACE' : 'LOCAL EVENT MODE'}</div><div>{supabaseConfigured ? 'Cloud records use authenticated database policies.' : 'Local workspace uses the venue relay when available.'}</div></div></aside>; }
 function PageHead({ eyebrow, title, text, children }: { eyebrow: string; title: string; text: string; children?: React.ReactNode }) { return <div className="page-head"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{text}</p></div><div className="actions">{children}</div></div>; }
 function Overview({ projects, setPage, open }: { projects: Project[]; setPage: (p: Page) => void; open: (p: Project) => void }) {
-  const [judgingCount, setJudgingCount] = useState(0);
+  const [judgingCount, setJudgingCount] = useState<number | null>(null);
   const [hardwareStatus, setHardwareStatus] = useState('Checking');
   const reportsSaved = projects.filter(project => Object.values(project.report || {}).some(section => section.trim())).length;
-  useEffect(() => { relayRequest<Array<unknown>>('/judging').then(records => setJudgingCount(records.length)).catch(() => setJudgingCount(loadLocal('circux-judging', []).length)); relayRequest<{ configured: boolean; connected: boolean }>('/device/health').then(status => setHardwareStatus(status.connected ? 'Connected' : status.configured ? 'Disconnected' : 'Not configured')).catch(() => setHardwareStatus('Unavailable')); }, []);
+  useEffect(() => {
+    if (supabaseConfigured && supabase) {
+      void supabase.from('judging_records').select('id', { count: 'exact', head: true }).then(({ count, error }) => setJudgingCount(error ? null : count || 0));
+      setHardwareStatus('Check local Board Health'); return;
+    }
+    relayRequest<Array<unknown>>('/judging').then(records => setJudgingCount(records.length)).catch(() => setJudgingCount(loadLocal('circux-judging', []).length));
+    relayRequest<{ configured: boolean; connected: boolean }>('/device/health').then(status => setHardwareStatus(status.connected ? 'Connected' : status.configured ? 'Disconnected' : 'Not configured')).catch(() => setHardwareStatus('Unavailable'));
+  }, []);
   return <>
-    <PageHead eyebrow="Workspace overview" title="Good morning, Yeshwanth." text="Manage saved projects, reports, uploads, judging, and exhibition status."><Btn onClick={() => setPage('Uploads')}><Upload size={14} /> Upload files</Btn><Btn primary onClick={() => setPage('Project Builder')}><Plus size={14} /> New project</Btn></PageHead>
+    <PageHead eyebrow="Workspace overview" title="Event overview" text="Manage saved projects, reports, uploads, judging, and exhibition status."><Btn onClick={() => setPage('Uploads')}><Upload size={14} /> Upload files</Btn><Btn primary onClick={() => setPage('Project Builder')}><Plus size={14} /> New project</Btn></PageHead>
     <div className="grid stats">
       <div className="card stat"><div className="stat-label">Project records</div><div className="stat-value">{projects.length}</div><div className="trend">Saved in this workspace</div></div>
       <div className="card stat"><div className="stat-label">Saved reports</div><div className="stat-value">{reportsSaved}</div><div className="trend">Projects with report content</div></div>
       <div className="card stat"><div className="stat-label">Hardware</div><div className="stat-value">{hardwareStatus}</div><div className="trend">Verified adapter status</div></div>
-      <div className="card stat"><div className="stat-label">Judging records</div><div className="stat-value">{judgingCount}</div><div className="trend">Saved evaluations</div></div>
+      <div className="card stat"><div className="stat-label">Judging records</div><div className="stat-value">{judgingCount === null ? 'Loading' : judgingCount}</div><div className="trend">Saved evaluations visible to this account</div></div>
     </div>
     <div className="grid two"><div className="card"><div className="card-head"><h3>Project workspace</h3><button className="text-button" onClick={() => setPage('Projects')}>View all <ChevronRight size={13} /></button></div>
       {projects.slice(0, 4).map(project => <div className="project-row" key={project.id}><div className="project-icon"><Target size={16} /></div><div style={{ flex: 1 }}><div className="project-name">{project.name}</div><div className="project-meta">{project.team} ? {project.status}</div><div className="progress"><i style={{ width: project.progress + '%' }} /></div></div><button className="icon-btn" onClick={() => open(project)} aria-label={'Open ' + project.name}><ChevronRight size={15} /></button></div>)}
@@ -58,35 +68,76 @@ function Showcase({ project, projects, onSelect, setPage }: { project: Project |
     <section className="card showcase-note"><div><div className="eyebrow">Visitor takeaway</div><h3>What this project does</h3><p>{active.summary}</p></div><span className="showcase-note-mark">C</span></section>
   </>;
 }
-function SettingsPage({ admin, setAdmin, projects, setProjects, config, setConfig, dark, setDark }: { admin: string; setAdmin: (x: string) => void; projects: Project[]; setProjects: (projects: Project[]) => void; config: WorkspaceConfig; setConfig: React.Dispatch<React.SetStateAction<WorkspaceConfig>>; dark: boolean; setDark: (dark: boolean) => void }) { return <><PageHead eyebrow="Workspace preferences" title="Settings" text="Customize the event workspace, appearance, and exhibition display."><Badge type="green">Local workspace</Badge></PageHead><AppearanceSettings dark={dark} setDark={setDark} /><WorkspaceSettings admin={admin} setAdmin={setAdmin} projects={projects} setProjects={setProjects} config={config} setConfig={setConfig} /><AdminAccessInfo /></>; }
-export default function App() {
+function SettingsPage({ admin, setAdmin, projects, setProjects, config, setConfig, dark, setDark, role }: { admin: string; setAdmin: (x: string) => void; projects: Project[]; setProjects: (projects: Project[]) => void; config: WorkspaceConfig; setConfig: React.Dispatch<React.SetStateAction<WorkspaceConfig>>; dark: boolean; setDark: (dark: boolean) => void; role: CircuxRole }) { return <><PageHead eyebrow="Workspace preferences" title="Settings" text="Customize the event workspace, appearance, and exhibition display."><Badge type="green">{supabaseConfigured ? 'Cloud workspace' : 'Local workspace'}</Badge></PageHead><AppearanceSettings dark={dark} setDark={setDark} /><WorkspaceSettings admin={admin} setAdmin={setAdmin} projects={projects} setProjects={setProjects} config={config} setConfig={setConfig} /><AdminAccessInfo />{role === 'admin' && supabaseConfigured && <UserAccessPanel />}</>; }
+function App() {
+  const { role, user, local, signOut } = useCircuxAuth();
   const [page, setPage] = useState<Page>('Overview');
   const [dark, setDark] = useState(false);
   const [admin, setAdmin] = useState('Yeshwanth');
-  const [projects, setProjects] = useState<Project[]>(defaultProjects);
+  const [projects, setProjects] = useState<Project[]>(supabaseConfigured || process.env.NODE_ENV === 'production' || localMode ? [] : defaultProjects);
+  const [persistenceError, setPersistenceError] = useState('');
   const [config, setConfig] = useState<WorkspaceConfig>(defaultConfig);
   const [selected, setSelected] = useState<Project | null>(null);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {
-    const localProjects = loadLocal('circux-projects', defaultProjects);
+    if (supabaseConfigured && supabase && user) {
+      setDark(loadLocal('circux-dark', false)); setAdmin(user.email || 'Circux user');
+      Promise.all([
+        supabase.from('projects').select('id,name,data,is_public').eq('is_archived', false).order('updated_at', { ascending: false }),
+        role === 'admin' || role === 'instructor' ? supabase.from('workspace_settings').select('data').eq('id', 'event').maybeSingle() : Promise.resolve({ data: null, error: null }),
+        supabase.from('profiles').select('preferences').eq('id', user.id).maybeSingle(),
+      ]).then(([projectResult, configResult, preferenceResult]) => {
+        if (projectResult.error) setPersistenceError(`Could not load projects: ${projectResult.error.message}`);
+        else setProjects((projectResult.data || []).map(row => ({ ...(row.data as Project), id: row.id, name: row.name, hidden: !row.is_public })));
+        if (configResult.error) setPersistenceError(`Could not load event settings: ${configResult.error.message}`);
+        else if (configResult.data?.data) setConfig({ ...defaultConfig, ...(configResult.data.data as Partial<WorkspaceConfig>) });
+        if (!preferenceResult.error) setDark(Boolean(preferenceResult.data?.preferences?.dark));
+        setHydrated(true);
+      });
+      return;
+    }
+    const localProjects = loadLocal<Project[]>('circux-projects', process.env.NODE_ENV === 'production' || localMode ? [] : defaultProjects);
     const localConfig = loadLocal('circux-workspace-config', defaultConfig);
     setDark(loadLocal('circux-dark', false)); setAdmin(loadLocal('circux-admin', 'Yeshwanth'));
     setProjects(localProjects); setConfig(localConfig);
     Promise.all([relayRequest<Project[]>('/projects').catch(() => null), relayRequest<Partial<WorkspaceConfig>>('/config').catch(() => null)]).then(([remoteProjects, remoteConfig]) => {
-      if (remoteProjects?.length) setProjects(remoteProjects);
+      if (remoteProjects) setProjects(remoteProjects);
       if (remoteConfig) setConfig({ ...defaultConfig, ...localConfig, ...remoteConfig });
       setHydrated(true);
     });
-  }, []);
+  }, [user]);
   useEffect(() => {
     if (!hydrated) return;
-    saveLocal('circux-dark', dark); saveLocal('circux-projects', projects); saveLocal('circux-workspace-config', config);
+    saveLocal('circux-dark', dark);
+    if (!supabaseConfigured) { saveLocal('circux-projects', projects); saveLocal('circux-workspace-config', config); }
+    if (supabaseConfigured && supabase && user) {
+      if (role === 'admin' || role === 'instructor') {
+        void Promise.all(projects.map(project => supabase!.from('projects').upsert({ id: project.id, name: project.name, data: project, is_public: !project.hidden, updated_by: user.id }, { onConflict: 'id' })))
+          .then(results => { const failed = results.find(result => result.error); if (failed?.error) setPersistenceError(`Project save failed: ${failed.error.message}`); else setPersistenceError(''); });
+        void supabase.from('workspace_settings').upsert({ id: 'event', data: config, updated_by: user.id })
+          .then(({ error }) => { if (error) setPersistenceError(`Settings save failed: ${error.message}`); });
+      }
+      return;
+    }
     syncRelay('/config', config); syncRelay('/projects', { projects });
-  }, [dark, projects, config, hydrated]);
+  }, [dark, projects, config, hydrated, role, user]);
+  useEffect(() => {
+    if (!hydrated || !supabaseConfigured || !supabase || !user) return;
+    void supabase.from('profiles').update({ preferences: { dark } }).eq('id', user.id).then(({ error }) => { if (error) setPersistenceError(`Theme preference save failed: ${error.message}`); });
+  }, [dark, hydrated, user]);
   const saveProject = (project: Project) => { setProjects(current => current.some(item => item.id === project.id) ? current.map(item => item.id === project.id ? project : item) : [...current, project]); setSelected(project); setPage('Documentation Studio'); };
   const openProject = (project: Project, destination: Page = 'Showcase') => { setSelected(project); setPage(destination); };
+  const removeProject = async (project: Project) => {
+    if (supabaseConfigured && supabase) {
+      const { error } = await supabase.from('projects').update({ is_archived: true, updated_by: user?.id }).eq('id', project.id);
+      if (error) { setPersistenceError(`Project delete failed: ${error.message}`); return; }
+      setPersistenceError('');
+    }
+    setProjects(current => current.filter(item => item.id !== project.id));
+    if (selected?.id === project.id) setSelected(null);
+  };
   const content = page === 'Overview' ? <Overview projects={projects} setPage={setPage} open={project => openProject(project)} />
-    : page === 'Projects' ? <ProjectsPanel projects={projects} open={project => openProject(project)} newProject={() => setPage('Project Builder')} save={project => setProjects(current => current.map(item => item.id === project.id ? project : item))} remove={project => { setProjects(current => current.filter(item => item.id !== project.id)); if (selected?.id === project.id) setSelected(null); }} />
+    : page === 'Projects' ? <ProjectsPanel projects={projects} open={project => openProject(project)} newProject={() => setPage('Project Builder')} save={project => setProjects(current => current.map(item => item.id === project.id ? project : item))} remove={project => void removeProject(project)} />
     : page === 'Project Builder' ? <Builder save={saveProject} />
     : page === 'Documentation Studio' ? <DocumentationStudio project={selected} projects={projects} onSelect={project => { setSelected(project); setProjects(current => current.map(item => item.id === project.id ? project : item)); }} setPage={setPage} />
     : page === 'Showcase' ? <Showcase project={selected} projects={projects} onSelect={setSelected} setPage={setPage} />
@@ -95,8 +146,10 @@ export default function App() {
     : page === 'Live Monitor' ? <OperationalStatus />
     : page === 'Power Manager' ? <OperationalStatus power />
     : page === 'Board Health' ? <BoardHealthPanel />
-    : <SettingsPage admin={admin} setAdmin={setAdmin} projects={projects} setProjects={setProjects} config={config} setConfig={setConfig} dark={dark} setDark={setDark} />;
-  return <div className={'app ' + (dark ? 'dark' : '') + ' accent-' + config.accent}><Sidebar page={page} setPage={setPage} /><main className="main"><Header page={page} admin={admin} config={config} projects={projects} openResult={project => openProject(project)} /><div className="content">{content}</div></main><button onClick={() => setDark(!dark)} aria-label="Toggle theme" style={{ position: 'fixed', bottom: 18, right: 18, width: 38, height: 38, borderRadius: '50%', border: 0, background: 'var(--navy)', color: '#fff', display: 'grid', placeItems: 'center' }}>{dark ? <Sun size={16} /> : <Moon size={16} />}</button></div>;
+    : <SettingsPage admin={admin} setAdmin={setAdmin} projects={projects} setProjects={setProjects} config={config} setConfig={setConfig} dark={dark} setDark={setDark} role={role} />;
+  return <div className={'app ' + (dark ? 'dark' : '') + ' accent-' + config.accent}><Sidebar page={page} setPage={setPage} role={role} /><main className="main"><Header page={page} admin={admin} config={config} projects={projects} openResult={project => openProject(project)} /><div className="content">{persistenceError && <div className="callout" role="alert">{persistenceError}</div>}{content}</div></main><button onClick={() => setDark(!dark)} aria-label="Toggle theme" style={{ position: 'fixed', bottom: 18, right: 18, width: 38, height: 38, borderRadius: '50%', border: 0, background: 'var(--navy)', color: '#fff', display: 'grid', placeItems: 'center' }}>{dark ? <Sun size={16} /> : <Moon size={16} />}</button>{!local && <button className="text-button auth-signout" onClick={() => void signOut()}>Sign out</button>}</div>;
 }
+
+export default function Home() { return <AuthGate><App /></AuthGate>; }
 
 

@@ -10,6 +10,7 @@ import time
 import urllib.request
 
 import serial
+from backend.telemetry import validate_readings
 
 
 def post(url: str, token: str, payload: dict) -> None:
@@ -34,12 +35,13 @@ def main() -> None:
             try: post(f"{args.api}/api/boards/{args.board_id}/heartbeat", args.token, {"mode": "monitoring", "read_only": True})
             except Exception as error: print(f"heartbeat failed: {error}")
             last_heartbeat = now
-        raw = serial_port.readline().decode(errors="replace").strip()
+        raw = serial_port.read_until(size=4096).decode(errors="replace").strip()
         if not raw: continue
         try:
             payload = json.loads(raw)
-            if not isinstance(payload.get("readings"), list): raise ValueError("readings must be an array")
-            post(f"{args.api}/api/boards/{args.board_id}/readings", args.token, {"readings": payload["readings"], "board_temperature": payload.get("temperature"), "voltage": payload.get("voltage"), "mode": "monitoring", "read_only": True})
+            if not isinstance(payload, dict): raise ValueError("serial line must be a JSON object")
+            readings = validate_readings(payload.get("readings"))
+            post(f"{args.api}/api/boards/{args.board_id}/readings", args.token, {"readings": readings, "board_temperature": payload.get("temperature"), "voltage": payload.get("voltage"), "mode": "monitoring", "read_only": True})
         except Exception as error:
             print(f"reading rejected: {error}")
 

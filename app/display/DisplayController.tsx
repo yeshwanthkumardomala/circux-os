@@ -6,12 +6,14 @@ import { getProject, type Project, type ProjectReading } from '../../lib/project
 import { pairingUrl, qrImageUrl } from '../../lib/qr';
 import { relayRequest, relayUrl } from '../../lib/relay';
 import GlobalProjectSearch from '../components/GlobalProjectSearch';
+import { supabase, supabaseConfigured } from '../../lib/supabase-browser';
+import { hashDisplayToken, newDisplayToken } from '../../lib/display-capability';
 
 type Slots = { A: string | null; B: string | null };
 type Feed = { readings: ProjectReading[]; state: string; updatedAt: string };
 
 function Panel({ slot, projectId, project, feed, clear }: { slot: 'A' | 'B'; projectId: string | null; project?: Project | null; feed?: Feed; clear: (slot: 'A' | 'B') => void }) {
-  project = project || (projectId ? getProject(projectId) : null);
+  project = project || null;
   if (!project) return <section className="display-live-panel display-empty"><div><span className="display-slot">SLOT {slot}</span><h2>Waiting for a project</h2><p>Scan a project QR on the paired phone and send it here.</p></div></section>;
   const details = project.details || { members: [], readings: [], documents: [], circuit: '', video: '', media: { photos: [], documents: [], videos: [] } };
   const readings = feed?.readings || details.readings;
@@ -35,9 +37,24 @@ export default function DisplayController() {
   const [pairUrl, setPairUrl] = useState('');
   const [relayDisplayUrl, setRelayDisplayUrl] = useState('http://localhost:3002');
   const [projectMap, setProjectMap] = useState<Record<string, Project>>({});
-  const projects = useMemo(() => [slots.A, slots.B].filter(Boolean).map(id => projectMap[id!] || getProject(id!)).filter(Boolean) as Project[], [projectMap, slots]);
+  const projects = useMemo(() => [slots.A, slots.B].filter(Boolean).map(id => projectMap[id!] || (!supabaseConfigured ? getProject(id!) : null)).filter(Boolean) as Project[], [projectMap, slots]);
 
   useEffect(() => {
+    if (supabaseConfigured && supabase) {
+      let cancelled = false;
+      let createdId: string | null = null;
+      void (async () => {
+        const { data: auth } = await supabase!.auth.getUser();
+        if (!auth.user) throw new Error('Sign in with an event staff account before creating a cloud display session.');
+        const rawToken = newDisplayToken();
+        const { data, error } = await supabase!.from('exhibition_pairings').insert({ display_name: 'Circux live display', token_hash: await hashDisplayToken(rawToken), slots: { A: null, B: null }, expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), created_by: auth.user.id }).select('id,slots').single();
+        if (error) throw error;
+        createdId = data.id;
+        if (cancelled) { await supabase!.from('exhibition_pairings').update({ expires_at: new Date().toISOString() }).eq('id', data.id); return; }
+        setToken(rawToken); setSlots(data.slots as Slots); setPairUrl(pairingUrl(rawToken)); setConnected(true); setRelayDisplayUrl('Supabase cloud session'); setError('');
+      })().catch(error => { if (!cancelled) setError(error instanceof Error ? error.message : 'Could not create cloud display session.'); });
+      return () => { cancelled = true; if (createdId) void supabase!.from('exhibition_pairings').update({ expires_at: new Date().toISOString() }).eq('id', createdId); };
+    }
     setRelayDisplayUrl(relayUrl(''));
     let cancelled = false;
     Promise.all([relayRequest<{ token: string; slots: Slots }>('/session', { method: 'POST' }), relayRequest<{ host: string }>('/network')]).then(([data, network]) => {
@@ -50,6 +67,13 @@ export default function DisplayController() {
   useEffect(() => {
     const ids = [slots.A, slots.B].filter(Boolean) as string[];
     if (!ids.length) return;
+    if (supabaseConfigured && supabase) {
+      void supabase.from('projects').select('id,name,data').in('id', ids).eq('is_public', true).eq('is_archived', false).then(({ data, error }) => {
+        if (error) { setError(`Could not load display projects: ${error.message}`); return; }
+        setProjectMap(current => ({ ...current, ...Object.fromEntries((data || []).map(row => [row.id, { ...(row.data as Project), id: row.id, name: row.name }])) }));
+      });
+      return;
+    }
     Promise.all(ids.map(id => relayRequest<Project>(`/projects/${encodeURIComponent(id)}`).then(project => [id, project] as const).catch(() => null))).then(results => {
       setProjectMap(current => Object.fromEntries([...Object.entries(current), ...results.filter(Boolean) as [string, Project][]]));
     });
@@ -57,6 +81,19 @@ export default function DisplayController() {
 
   useEffect(() => {
     if (!token) return;
+    if (supabaseConfigured && supabase) {
+      let stopped = false;
+      const poll = async () => {
+        try {
+          const { data, error } = await supabase!.rpc('get_display_state', { p_token_hash: await hashDisplayToken(token) });
+          if (error) throw error;
+          if (!data?.length) { setConnected(false); setError('Display session expired. Reload to create a new session.'); return; }
+          if (!stopped) { setSlots(data[0].slots as Slots); setConnected(true); setError(''); }
+        } catch { if (!stopped) { setConnected(false); setError('Cloud display connection lost. Retrying…'); } }
+      };
+      void poll(); const timer = window.setInterval(() => void poll(), 1500);
+      return () => { stopped = true; window.clearInterval(timer); };
+    }
     const events = new EventSource(relayUrl(`/session/${token}/events`));
     events.onopen = () => setConnected(true);
     events.onerror = () => setConnected(false);
@@ -68,15 +105,15 @@ export default function DisplayController() {
     return () => events.close();
   }, [token]);
 
-  const clear = (slot: 'A' | 'B') => token && relayRequest(`/session/${token}/clear`, { method: 'POST', body: JSON.stringify({ slot }) }).catch(() => setError('Could not update the relay.'));
-  const swap = () => token && relayRequest(`/session/${token}/swap`, { method: 'POST' }).catch(() => setError('Could not update the relay.'));
+  const clear = async (slot: 'A' | 'B') => { if (!token) return; if (supabaseConfigured && supabase) { const { data, error } = await supabase.rpc('set_display_slot', { p_token_hash: await hashDisplayToken(token), p_slot: slot, p_project_id: null }); if (error || !data) setError('Could not clear display slot.'); return; } await relayRequest(`/session/${token}/clear`, { method: 'POST', body: JSON.stringify({ slot }) }).catch(() => setError('Could not update the relay.')); };
+  const swap = async () => { if (!token) return; if (supabaseConfigured && supabase) { const { data, error } = await supabase.rpc('swap_display_slots', { p_token_hash: await hashDisplayToken(token) }); if (error || !data) setError('Could not swap display slots.'); return; } await relayRequest(`/session/${token}/swap`, { method: 'POST' }).catch(() => setError('Could not update the relay.')); };
   const fullscreen = () => document.documentElement.requestFullscreen?.();
 
-  return <main className="display-page display-console"><header className="display-header"><span>CIRCUX OS · LIVE EXHIBITION DISPLAY</span><GlobalProjectSearch compact /><div className="display-header-actions"><span className={connected ? 'display-connection connected' : 'display-connection'}>● {connected ? 'RELAY CONNECTED' : 'RELAY OFFLINE'}</span><button className="display-small-button" onClick={fullscreen}><Expand size={14} /> Fullscreen</button></div></header>
-    <section className="display-console-head"><div><div className="display-eyebrow">Two project showcase</div><h1>Live project display</h1><p>Pair a phone, then send any scanned project to Slot A or Slot B.</p></div>{pairUrl && <div className="pair-card"><img src={qrImageUrl(pairUrl)} alt="Pair phone with this display" /><div><strong>Pair a phone</strong><small>Scan once, then scan project QR cards</small></div></div>}</section>
+  return <main className="display-page display-console"><header className="display-header"><span>CIRCUX OS · LIVE EXHIBITION DISPLAY</span><GlobalProjectSearch compact /><div className="display-header-actions"><span className={connected ? 'display-connection connected' : 'display-connection'}>● {connected ? (supabaseConfigured ? 'CLOUD CONNECTED' : 'RELAY CONNECTED') : 'DISCONNECTED'}</span><button className="display-small-button" onClick={fullscreen}><Expand size={14} /> Fullscreen</button></div></header>
+    <section className="display-console-head"><div><div className="display-eyebrow">Two project showcase</div><h1>Live project display</h1><p>Pair a phone, then send any scanned project to Slot A or Slot B. Sessions expire after four hours.</p></div>{pairUrl && <div className="pair-card"><img src={qrImageUrl(pairUrl)} alt="Pair phone with this display" /><div><strong>Pair a phone</strong><small>Scan once, then scan project QR cards</small></div></div>}</section>
     {error && <div className="display-alert"><RefreshCw size={15} /> {error}</div>}
     <div className="display-console-actions"><button className="display-small-button" onClick={swap}><ArrowLeftRight size={14} /> Swap slots</button><span>{projects.length} project{projects.length === 1 ? '' : 's'} active · relay-synchronized project display</span></div>
     <div className="display-live-columns"><Panel slot="A" projectId={slots.A} project={slots.A ? projectMap[slots.A] : null} feed={slots.A ? feeds[slots.A] : undefined} clear={clear} /><Panel slot="B" projectId={slots.B} project={slots.B ? projectMap[slots.B] : null} feed={slots.B ? feeds[slots.B] : undefined} clear={clear} /></div>
-    <footer>Phone and display must use the same Wi‑Fi · Relay: {relayDisplayUrl}</footer>
+    <footer>{supabaseConfigured ? 'Phones and display need internet access to sync this cloud session.' : `Phone and display must use the same Wi-Fi · Relay: ${relayDisplayUrl}`}</footer>
   </main>;
 }

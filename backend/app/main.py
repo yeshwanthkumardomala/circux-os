@@ -3,14 +3,17 @@ import json
 import os
 import secrets
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from backend.arduino_cli import ArduinoUnavailable, compile_sketch, detected_ports, run_cli, upload_sketch
+from backend.telemetry import validate_readings
 
 # Read the repository-local .env file for direct uvicorn launches without overriding shell env.
 _ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
@@ -33,6 +36,9 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 DB_PATH = DATA_DIR / "circux.db"
 ADMIN_TOKEN = os.getenv("CIRCUX_ADMIN_TOKEN", "")
 MAX_UPLOAD = 10 * 1024 * 1024
+# shortcut: per-process limits reset on restart; use a shared limiter if the local API is scaled out.
+_HARDWARE_REQUESTS: dict[tuple[str, str], list[float]] = {}
+_HARDWARE_RATE_LOCK = threading.Lock()
 
 app = FastAPI(title="Circux Local API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in os.getenv("CIRCUX_ALLOWED_ORIGIN", "http://localhost:3000").split(",") if origin.strip()], allow_credentials=False, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type", "X-Device-Token"])
@@ -110,11 +116,77 @@ class FallbackInput(BaseModel):
     mode: str = Field(default="saved-project", pattern="^saved-project$")
 
 
+class ArduinoInput(BaseModel):
+    sketch: str = Field(min_length=1, max_length=80)
+    fqbn: str = Field(min_length=1, max_length=160)
+
+
+class ArduinoUploadInput(ArduinoInput):
+    port: str = Field(min_length=1, max_length=256)
+
+
+def enforce_hardware_rate_limit(request: Request, action: str) -> None:
+    host = request.client.host if request.client else "unknown"
+    key = (host, action)
+    now = time.monotonic()
+    with _HARDWARE_RATE_LOCK:
+        recent = [stamp for stamp in _HARDWARE_REQUESTS.get(key, []) if now - stamp < 60]
+        limit = 2 if action == "upload" else 5
+        if len(recent) >= limit:
+            raise HTTPException(429, f"Hardware {action} limit reached; retry in a minute.")
+        recent.append(now)
+        _HARDWARE_REQUESTS[key] = recent
+        if len(_HARDWARE_REQUESTS) > 256:
+            _HARDWARE_REQUESTS.pop(next(iter(_HARDWARE_REQUESTS)))
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     with db() as connection:
         boards = connection.execute("SELECT COUNT(*) AS count FROM boards").fetchone()["count"]
     return {"ok": True, "service": "circux-fastapi", "boards": boards}
+
+
+@app.get("/api/hardware/health")
+def arduino_health(actor: str = Depends(require_admin)) -> dict[str, Any]:
+    try:
+        version = run_cli("version", "--format", "json", timeout=10).stdout.strip()
+        ports = detected_ports()
+        return {"ok": True, "configured": True, "version": version, "ports": ports}
+    except ArduinoUnavailable as error:
+        return {"ok": False, "configured": False, "error": str(error), "ports": []}
+    except (RuntimeError, TimeoutError, ValueError, json.JSONDecodeError) as error:
+        return {"ok": False, "configured": True, "error": str(error), "ports": []}
+
+
+@app.post("/api/hardware/compile")
+def arduino_compile(input: ArduinoInput, request: Request, actor: str = Depends(require_admin)) -> dict[str, Any]:
+    enforce_hardware_rate_limit(request, "compile")
+    try:
+        result = compile_sketch(input.sketch, input.fqbn)
+    except ArduinoUnavailable as error:
+        raise HTTPException(503, str(error)) from error
+    except TimeoutError as error:
+        raise HTTPException(504, str(error)) from error
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(422, str(error)) from error
+    audit("hardware.compile", actor, {"sketch": input.sketch, "fqbn": input.fqbn})
+    return result
+
+
+@app.post("/api/hardware/upload")
+def arduino_upload(input: ArduinoUploadInput, request: Request, actor: str = Depends(require_admin)) -> dict[str, Any]:
+    enforce_hardware_rate_limit(request, "upload")
+    try:
+        result = upload_sketch(input.sketch, input.fqbn, input.port)
+    except ArduinoUnavailable as error:
+        raise HTTPException(503, str(error)) from error
+    except TimeoutError as error:
+        raise HTTPException(504, str(error)) from error
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(422, str(error)) from error
+    audit("hardware.upload", actor, {"sketch": input.sketch, "fqbn": input.fqbn, "port": input.port})
+    return result
 
 
 @app.get("/api/config")
@@ -199,11 +271,9 @@ def heartbeat(board_id: str, x_device_token: str | None = Header(default=None)) 
 @app.post("/api/boards/{board_id}/readings")
 def readings(board_id: str, payload: dict[str, Any], x_device_token: str | None = Header(default=None)) -> dict[str, Any]:
     board = board_from_token(board_id, x_device_token)
-    if not isinstance(payload.get("readings"), list) or len(payload["readings"]) > 32:
-        raise HTTPException(400, "readings must be an array")
-    if any(not isinstance(item, dict) or not item.get("label") for item in payload["readings"]):
-        raise HTTPException(400, "each reading needs a label")
-    data = {"board_id": board_id, "readings": payload["readings"], "received_at": time.time()}
+    try: validated = validate_readings(payload.get("readings"))
+    except ValueError as error: raise HTTPException(400, str(error)) from error
+    data = {"board_id": board_id, "readings": validated, "received_at": time.time()}
     with db() as connection:
         connection.execute("INSERT INTO readings(board_id,data,created_at) VALUES(?,?,?)", (board_id, json.dumps(data), time.time()))
         board_data = json.loads(board["data"])

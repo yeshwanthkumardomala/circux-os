@@ -28,9 +28,15 @@ A modern workspace for organizing robotics projects, presenting student innovati
 
 ## ◈ About Circux
 
-Circux OS is a browser-based platform for **STEM educators, robotics labs, students, and exhibition teams**. It brings project organization, documentation, presentation, and judging into one workspace.
+Circux OS is a browser-based platform for **STEM educators, robotics labs, students, and exhibition teams**. It brings project organization, documentation, presentation, and judging into one workspace. Cloud mode uses Supabase Auth, PostgreSQL, RLS, and private object storage. The local Node relay/FastAPI services remain for LAN exhibition and device communication; Vercel cannot reach USB devices on a venue computer.
 
-Designed for local exhibition workflows, Circux supports QR-based project access and phone-to-display pairing. The current build is a tested prototype, not a fully managed multi-user production service: persistence, identity management, and live sensor telemetry require additional infrastructure.
+### Current verified status (October 2026)
+
+- Cloud sign-in, role-gated workspace, project/settings persistence, database-backed reports, judging inserts, cloud file storage, and permission-filtered resource search are implemented.
+- New accounts start as viewers. An operator must promote the first administrator in Supabase SQL Editor before staff can use the workspace.
+- Public project routes read published, non-archived Supabase rows in cloud mode. Production starts with an empty project set; sample fixtures are not seeded as real data.
+- Hardware telemetry still requires the local FastAPI agent and a physical Arduino/RFID device. Cloud deployment cannot access USB/serial hardware. Cloud display pairing uses expiring tokens and polling; deployed phone/display E2E verification remains pending.
+- Production behavior is not fully validated until a real user is provisioned, Supabase Auth redirect URLs are configured, and deployed workflows are exercised.
 
 ## 📸 Live deployment preview
 
@@ -65,6 +71,7 @@ The following preview is captured from the public Vercel deployment. It may refr
 | Backend foundation | FastAPI |
 | Exhibition relay | Node.js, Server-Sent Events |
 | Deployment | Vercel (frontend) |
+| Cloud database, auth, storage | Supabase PostgreSQL, Auth, Storage (RLS enabled) |
 
 </div>
 
@@ -96,6 +103,8 @@ For the local app, authenticated exhibition relay, QR pairing, uploads, judging,
 npm run exhibition
 ```
 
+For Board Health, Arduino CLI, and serial telemetry, install Python dependencies with `python -m pip install -r backend/requirements.txt` and run `npm run backend` in a separate terminal. `RUN-CIRCUX.bat` starts both services plus the local frontend/relay.
+
 Open the display at **http://localhost:3000/display**. For phone pairing, use the host computer's LAN IP address instead of `localhost`, and connect both devices to the same trusted Wi-Fi network.
 
 For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) and [HARDWARE.md](HARDWARE.md) for additional setup and integration details.
@@ -104,15 +113,16 @@ For Windows, the repository also includes `RUN-CIRCUX.bat`. See [PROJECT_CONTEXT
 
 | Capability | Current status |
 | --- | --- |
-| Project workspace and showcase | Functional locally; project/config sync to the authenticated relay when reachable |
-| QR project pages | Built-in examples work online; custom projects need the local relay on the same reachable network |
-| Reports and settings | Saved in browser storage and synced to the local relay when available |
-| Judging | Saved to the authenticated relay; browser-local fallback when offline |
-| Uploads | File contents are stored by the local relay under `.circux-data/uploads/<project-id>/`; offline browser fallback retains filenames only |
-| Sensor telemetry | Not configured; saved values are reference data and no synthetic feed is generated |
-| Cloud database/API | Not connected; Vercel currently hosts the frontend only |
-| Relay authentication | Shared admin token protects relay reads and mutations; user roles are not implemented |
-| Direct hardware control | Disabled by default and out of scope for this update |
+| Project workspace and showcase | Supabase-backed in cloud mode; local relay mode remains available |
+| QR project pages | Public Supabase project reads in cloud mode; local mode uses local/relay records |
+| Reports and settings | Project reports and event settings persist in PostgreSQL; theme preference persists per account |
+| Judging | Authenticated records persist in PostgreSQL; role policies restrict reads/writes and validate scoring limits |
+| Uploads | Private Supabase Storage bucket, 10 MB cap, database metadata; local mode uses relay files |
+| Universal search | Authenticated RPC searches projects, members, documentation, judging, and display names under RLS |
+| Sensor telemetry | No fabricated live readings; physical board validation remains outstanding |
+| Hardware agent | Local FastAPI provides authenticated Arduino CLI detect/compile/upload and validates serial JSON telemetry; no physical board has been confirmed in this workspace |
+| Display pairing | Local relay/SSE and Supabase cloud pairing are implemented; deployed phone/display E2E is pending |
+| First administrator | Requires explicit operator promotion after signup; no default password is created |
 
 ## 🔐 Security & Data Notes
 
@@ -122,22 +132,26 @@ See [SECURITY.md](SECURITY.md) for safe deployment guidance and vulnerability re
 - Project external links are saved with project records; uploaded files are organized in per-project folders.
 - Display pairing sessions remain in memory and expire after the configured inactivity timeout.
 - Browser-local storage is an offline fallback and does not synchronize between browsers without the relay.
-- The Vercel site has no configured relay URL or database environment variables; use the local exhibition workflow for shared event data.
+- Vercel requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and a redeployment after env changes. Never put a service-role key in a `NEXT_PUBLIC_` variable.
+- Supabase project URL: `https://pluvaeplyqvwoctnxowc.supabase.co`. Auth redirect allow-list must include `https://circux-os.vercel.app/**` and local development URLs.
+- Apply versioned schema changes from `supabase/migrations/` before deploying code that depends on them.
 - Keep device keys and admin tokens private. Do not commit secrets to the repository.
 
 ## 🚀 Production-readiness checklist
 
 Before using this with real students, judges, or devices:
 
-- [ ] Add durable server-side storage and backups for projects, reports, uploads, and judging.
-- [ ] Implement user accounts, role-based permissions, session expiry, and audit logs.
-- [ ] Configure production environment variables in Vercel and any separately hosted relay/backend.
+- [x] Provision PostgreSQL, Auth, storage, RLS policies, and versioned schema migrations.
+- [x] Add sign-in, role checks, database-enforced permissions, score constraints, and mutation audit events.
+- [x] Configure public Supabase URL and publishable key in Vercel; production-flow verification remains pending.
+- [ ] Promote the first admin and configure Supabase Auth redirects and email confirmation.
+- [ ] Verify backups and perform a restore drill; configure uploaded-file retention.
 - [ ] Use HTTPS/WSS for all remote device and relay traffic; avoid exposing admin tokens in URLs.
 - [ ] Run end-to-end tests on mobile and desktop against the deployed environment.
 - [ ] Test upload limits, recovery, rate limiting, and backup/restore procedures.
 - [ ] Validate every hardware command with a physical interlock and fail-safe state.
 
-CI verifies type checking, relay smoke/security tests, search coverage, production build, and Python backend tests. A green CI run does not itself prove that Vercel environment variables, external services, or physical hardware are configured correctly.
+CI verifies type checking, relay smoke/security tests, search coverage, production build, and Python backend tests. Passing CI does not prove account provisioning, deployed end-to-end flows, or physical hardware.
 
 ## Functional mode update (October 2026)
 
@@ -147,15 +161,15 @@ The Projects page includes edit, hide/show, and delete actions. Settings include
 
 For Windows, `RUN-CIRCUX.bat` creates a random `CIRCUX_ADMIN_TOKEN` when one is not configured, saves it in the ignored `.env` file, and prints it in the launch terminal. In the admin Settings page, paste it once into **Local backend access** and save it to this browser; it can then be revealed or copied there and is also used by Board Health. The frontend cannot read `.env` automatically. This admin token is different from each board/device token. The local FastAPI docs are at `http://localhost:8000/docs` while the backend is running.
 
-To point a browser build at a relay reachable by its users, set `NEXT_PUBLIC_CIRCUX_RELAY_URL` at build time and allow the frontend origin in `CIRCUX_ALLOWED_ORIGIN`. Do not point the public Vercel site at a private LAN address. Supabase is active, but currently has no application tables; Vercel has no database/backend environment configured. Shared cloud persistence is therefore unavailable. Use the local exhibition server for shared event data on the venue LAN.
+To point a local browser build at a relay reachable by its users, set `NEXT_PUBLIC_CIRCUX_RELAY_URL` at build time and allow the frontend origin in `CIRCUX_ALLOWED_ORIGIN`. Do not point the public Vercel site at a private LAN address.
 
 ## 🧭 Roadmap
 
-- [ ] Persistent project and judging storage
-- [ ] Authentication and role-based access
-- [ ] More complete hardware adapter integrations
+- [x] Persistent project and judging storage foundation
+- [x] Authentication and role-based access foundation
+- [ ] Complete secure hardware-agent integrations and physical validation
 - [ ] Automated tests for pairing, projects, and judging
-- [ ] Improved reporting and export workflows
+- [x] Report and export workflows
 
 ## 🤝 Contributing
 
@@ -174,3 +188,30 @@ Check the repository for a license file before reusing or redistributing this pr
 <sub>Built for connected STEM and robotics experiences.</sub>
 
 </div>
+
+## Cloud onboarding
+
+1. Open `https://circux-os.vercel.app/` and create an account. Confirm your email if Supabase Auth requires it.
+2. In Supabase SQL Editor, promote only the account you control (replace the email):
+
+   ```sql
+   update public.profiles p set role = 'admin'
+   from auth.users u where p.id = u.id and lower(u.email) = lower('YOUR-EMAIL');
+   ```
+
+3. Sign in again, then create projects in the workspace. Role editing is not available to public users.
+4. `CIRCUX_ADMIN_TOKEN` is only for the local FastAPI/relay. It is not a Supabase login token and must not be placed in a public Vercel variable.
+
+### Local cloud development
+
+Copy `.env.example` to `.env`, set the two `NEXT_PUBLIC_SUPABASE_*` values, then run `npm ci` and `npm run dev`. Leave `NEXT_PUBLIC_CIRCUX_LOCAL_MODE` unset for cloud-auth behavior. Use `NEXT_PUBLIC_CIRCUX_LOCAL_MODE=true` only for local UI work without cloud authentication; it is not production authentication.
+
+### Remaining production checks
+
+- Configure Supabase Auth redirect URLs and email confirmation for the Vercel domain.
+- Verify backups and run a restore drill; configure uploaded-file retention.
+- Add a FastAPI readiness endpoint and production monitoring/log retention.
+- Verify Arduino CLI against physical boards; add reader-specific RFID firmware/protocol support and test disconnect/safe-state behavior.
+- Run cloud end-to-end tests for signup, roles, project CRUD, reports, files, judging, and public QR pages.
+
+Run `npm run typecheck`, `npm run test:search`, `npm run test:uploads`, `npm run test:relay`, and `python -m unittest discover -s backend -p 'test_*.py' -v`. Passing CI does not prove the deployed or physical-hardware flows.

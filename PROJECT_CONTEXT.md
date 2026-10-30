@@ -2,9 +2,24 @@
 
 Repository: https://github.com/yeshwanthkumardomala/circux-os
 
-The repository is online and is the permanent code/documentation link. The running application is intentionally local because it must access the venue hotspot and hardware; GitHub is not the live backend host.
+The repository is the permanent code/documentation link. The cloud workspace is deployed on Vercel with Supabase services; the local FastAPI agent remains necessary for USB hardware on the venue network. GitHub stores and deploys source code, not the hardware agent.
 
 Online frontend demo: https://circux-os.vercel.app/
+
+## Current status — October 30, 2026
+
+This section supersedes older prototype/cloud-status notes later in this document. Cloud infrastructure is now connected; this is still not a fully hardware-validated production release.
+
+- Vercel project `circux-os` has `NEXT_PUBLIC_SUPABASE_URL` and the Supabase publishable key configured for production, preview, and development. These are public browser values; RLS protects data. No service-role key is in the frontend.
+- Supabase project `pluvaeplyqvwoctnxowc` has PostgreSQL tables, RLS, Auth profile trigger, private Storage bucket, role policies, score validation, audit triggers, public project search, universal authenticated search, and capability-based cloud display pairing.
+- Sign-up creates a `viewer`. The first owner must sign up, then an operator must promote that account once in Supabase SQL Editor using the instructions in `README.md`. Afterward, account role changes are available in admin Settings.
+- Cloud project/report/settings/judging data and uploads persist in Supabase. There are no seeded sample projects in cloud mode.
+- Local FastAPI remains SQLite-backed on the venue computer; it is not the cloud database API. It now offers authenticated Arduino CLI detect/compile/upload endpoints and validated serial JSON telemetry. The serial firmware must emit reader data as JSON; no specific RFID reader has been physically validated.
+- Cloud display pairing polls Supabase; local exhibition mode still uses the Node relay/SSE.
+- Tests run in this implementation: TypeScript, global-search coverage, upload-policy guard, relay smoke, 11 Python unit tests, cloud-mode production build, and npm audit (zero vulnerabilities). Next.js 16 warns that React 18 support is deprecated; build remains successful.
+- Physical hardware validation is blocked by the current workstation reporting `No boards found.` Cloud signup/role-permission E2E flows also await the owner account and Supabase Auth redirect configuration.
+
+Current Supabase migrations are in `supabase/migrations/`; apply them in order for a new environment. Production verification, backup/restore drill, long-run load test, and the account-provisioned browser walkthrough remain open.
 
 ## 1. Purpose
 
@@ -52,7 +67,8 @@ GitHub repository
 Main event computer
   Next.js :3000  ---- browser pages, QR, judge display
   FastAPI :8000  ---- SQLite, boards, readings, uploads, fallback
-  Node relay :3002 ---- current phone/display pairing flow
+  Node relay :3002 ---- local-mode phone/display pairing
+  Supabase ---- cloud-mode database, auth, uploads, and display pairing
         |
 Private hotspot/router LAN
   phones, judge displays, Arduino helper laptops, Wi-Fi boards
@@ -130,11 +146,11 @@ python backend\agent.py --port COM6 --board-id CX-104-BOARD-1 --token DEVICE_TOK
 
 ## 9. Known limits and next upgrades
 
-- FastAPI is a foundation; the existing Node relay still serves the current display pairing flow.
+- FastAPI remains local; the Node relay serves local-mode pairing while cloud-mode pairing uses Supabase capability RPCs.
 - QR images currently use the external QR image service; local QR generation should be added for a fully offline event.
 - Real hardware calibration, electrical safety, Wi-Fi range, and long-duration load testing still require physical testing.
 - GitHub Pages cannot run this backend; the repository URL is the stable cloud handoff link. A public app URL requires a separate host such as Vercel or a server.
-- For a larger event, replace SQLite with PostgreSQL and add scheduled backups/monitoring.
+- Cloud app records use PostgreSQL. The local hardware API still uses SQLite; add local backup/restore automation and monitoring before a long-running event.
 
 ## 10. Handoff summary
 

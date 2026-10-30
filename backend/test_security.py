@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 import uuid
+from types import SimpleNamespace
 
 _TEST_DATA_DIR = tempfile.mkdtemp(prefix="circux-backend-tests-")
 os.environ["CIRCUX_DATA_DIR"] = _TEST_DATA_DIR
@@ -43,6 +44,15 @@ class BackendSecurityTests(unittest.TestCase):
         with self.assertRaises(HTTPException) as revoked:
             main.board_from_token(board_id, "first-device-token")
         self.assertEqual(revoked.exception.status_code, 401)
+
+    def test_hardware_upload_is_rate_limited_per_client(self):
+        main._HARDWARE_REQUESTS.clear()
+        request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"))
+        main.enforce_hardware_rate_limit(request, "upload")
+        main.enforce_hardware_rate_limit(request, "upload")
+        with self.assertRaises(HTTPException) as limited:
+            main.enforce_hardware_rate_limit(request, "upload")
+        self.assertEqual(limited.exception.status_code, 429)
 
 
 if __name__ == "__main__":

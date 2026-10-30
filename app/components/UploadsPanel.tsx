@@ -5,9 +5,11 @@ import { Download, ExternalLink, FileText, Link2, Trash2, Upload, X } from 'luci
 import type { Project } from '../../lib/project-data';
 import { relayFetch, relayRequest } from '../../lib/relay';
 import { loadLocal, saveLocal } from '../../lib/storage';
+import { supabase, supabaseConfigured } from '../../lib/supabase-browser';
 
 type UploadItem = { id?: string; name: string; size?: number; type?: string; projectId?: string | null };
 const toDataUrl = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error(`Could not read ${file.name}`)); reader.readAsDataURL(file); });
+const allowedTypes: Record<string, string> = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', txt: 'text/plain', md: 'text/markdown', csv: 'text/csv', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', mp4: 'video/mp4', webm: 'video/webm' };
 
 export default function UploadsPanel({ projects, onProjectsChange }: { projects: Project[]; onProjectsChange: (projects: Project[]) => void }) {
   const [files, setFiles] = useState<UploadItem[]>([]);
@@ -19,7 +21,10 @@ export default function UploadsPanel({ projects, onProjectsChange }: { projects:
   const active = projects.find(project => project.id === projectId);
   const links = useMemo(() => active?.details?.media?.documents || [], [active]);
 
-  useEffect(() => { relayRequest<UploadItem[]>('/uploads').then(setFiles).catch(() => setFiles(loadLocal<string[]>('circux-upload-names', []).map(name => ({ name })))); }, []);
+  useEffect(() => {
+    if (supabaseConfigured && supabase) { void supabase.from('uploads').select('id,file_name,byte_size,content_type,project_id').order('created_at', { ascending: false }).then(({ data, error }) => { if (error) setMessage(`Could not load uploads: ${error.message}`); else setFiles((data || []).map(row => ({ id: row.id, name: row.file_name, size: Number(row.byte_size), type: row.content_type, projectId: row.project_id }))); }); return; }
+    relayRequest<UploadItem[]>('/uploads').then(setFiles).catch(() => setFiles(loadLocal<string[]>('circux-upload-names', []).map(name => ({ name }))));
+  }, []);
   useEffect(() => { if (projectId !== '_unassigned' && !projects.some(project => project.id === projectId)) setProjectId(projects[0]?.id || '_unassigned'); }, [projectId, projects]);
 
   const addFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,11 +34,25 @@ export default function UploadsPanel({ projects, onProjectsChange }: { projects:
     setBusy(true);
     for (const file of selected) {
       if (file.size > 10 * 1024 * 1024) { setMessage(`${file.name} exceeds the 10 MB limit.`); continue; }
+      const extension = file.name.split('.').pop()?.toLowerCase() || '';
+      if (!allowedTypes[extension]) { setMessage(`${file.name} is not a supported file type.`); continue; }
+      const contentType = allowedTypes[extension];
       try {
-        const item = await relayRequest<UploadItem>('/uploads', { method: 'POST', body: JSON.stringify({ name: file.name, type: file.type, data: await toDataUrl(file), projectId: active?.id }) });
+        if (supabaseConfigured && supabase) {
+          const { data: auth } = await supabase.auth.getUser();
+          if (!auth.user) throw new Error('Sign in is required to upload files.');
+          const path = `${auth.user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const { error: uploadError } = await supabase.storage.from('circux-project-files').upload(path, file, { contentType });
+          if (uploadError) throw uploadError;
+          const { data, error } = await supabase.from('uploads').insert({ project_id: active?.id || null, storage_path: path, file_name: file.name, content_type: contentType, byte_size: file.size, uploaded_by: auth.user.id }).select('id,file_name,byte_size,content_type,project_id').single();
+          if (error) { await supabase.storage.from('circux-project-files').remove([path]); throw error; }
+          setFiles(current => [{ id: data.id, name: data.file_name, size: Number(data.byte_size), type: data.content_type, projectId: data.project_id }, ...current]); setMessage(`${file.name} uploaded securely.`); continue;
+        }
+        const item = await relayRequest<UploadItem>('/uploads', { method: 'POST', body: JSON.stringify({ name: file.name, type: contentType, data: await toDataUrl(file), projectId: active?.id }) });
         setFiles(current => [...current, item]);
         setMessage(`${file.name} saved in the local backend project folder.`);
       } catch (error) {
+        if (supabaseConfigured) { setMessage(`${file.name}: ${error instanceof Error ? error.message : 'Upload failed.'}`); continue; }
         setFiles(current => [...current, { name: file.name, size: file.size, type: file.type, projectId: active?.id }]);
         const localNames = loadLocal<string[]>('circux-upload-names', []);
         if (!localNames.includes(file.name)) saveLocal('circux-upload-names', [...localNames, file.name]);
@@ -53,8 +72,9 @@ export default function UploadsPanel({ projects, onProjectsChange }: { projects:
     const media = detail.media || { photos: [], documents: [], videos: [] };
     const updated = { ...active, details: { ...detail, media: { ...media, documents: [...media.documents, { title: title.trim(), url: parsed.toString() }] } } };
     onProjectsChange(projects.map(project => project.id === active.id ? updated : project));
-    saveLocal('circux-projects', projects.map(project => project.id === active.id ? updated : project));
+    if (!supabaseConfigured) saveLocal('circux-projects', projects.map(project => project.id === active.id ? updated : project));
     setTitle(''); setUrl('');
+    if (supabaseConfigured) { setMessage('Project link saved.'); return; }
     try { await relayRequest(`/projects/${encodeURIComponent(active.id)}`, { method: 'PUT', body: JSON.stringify(updated) }); setMessage('Project link saved to the local backend.'); }
     catch { setMessage('Link saved in this browser; relay sync is unavailable.'); }
   };
@@ -65,13 +85,19 @@ export default function UploadsPanel({ projects, onProjectsChange }: { projects:
     const media = detail.media || { photos: [], documents: [], videos: [] };
     const updated = { ...active, details: { ...detail, media: { ...media, documents: media.documents.filter(item => item !== link) } } };
     const next = projects.map(project => project.id === active.id ? updated : project);
-    onProjectsChange(next); saveLocal('circux-projects', next);
+    onProjectsChange(next); if (!supabaseConfigured) saveLocal('circux-projects', next);
+    if (supabaseConfigured) { setMessage('Project link removed.'); return; }
     relayRequest(`/projects/${encodeURIComponent(active.id)}`, { method: 'PUT', body: JSON.stringify(updated) }).then(() => setMessage('Link removed.')).catch(() => setMessage('Link removed in this browser; relay sync is unavailable.'));
   };
 
   const openFile = async (item: UploadItem) => {
     if (!item.id) return;
     try {
+      if (supabaseConfigured && supabase) {
+        const { data: row, error: lookupError } = await supabase.from('uploads').select('storage_path').eq('id', item.id).single(); if (lookupError) throw lookupError;
+        const { data, error } = await supabase.storage.from('circux-project-files').download(row.storage_path); if (error) throw error;
+        const objectUrl = URL.createObjectURL(data); const link = document.createElement('a'); link.href = objectUrl; link.download = item.name; link.click(); window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000); return;
+      }
       const response = await relayFetch(`/uploads/file/${encodeURIComponent(item.id)}`);
       if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || 'Download failed');
       const objectUrl = URL.createObjectURL(await response.blob());
@@ -81,12 +107,16 @@ export default function UploadsPanel({ projects, onProjectsChange }: { projects:
 
   const removeFile = async (item: UploadItem) => {
     if (!window.confirm(`Delete ${item.name}?`)) return;
-    if (item.id) {
+    if (item.id && supabaseConfigured && supabase) {
+      const { data: row, error: lookupError } = await supabase.from('uploads').select('storage_path').eq('id', item.id).single(); if (lookupError) { setMessage(lookupError.message); return; }
+      const { error: fileError } = await supabase.storage.from('circux-project-files').remove([row.storage_path]); if (fileError) { setMessage(fileError.message); return; }
+      const { error } = await supabase.from('uploads').delete().eq('id', item.id); if (error) { setMessage(`File deleted but metadata remains: ${error.message}`); return; }
+    } else if (item.id) {
       try { await relayRequest(`/uploads/${encodeURIComponent(item.id)}`, { method: 'DELETE' }); }
       catch (error) { setMessage(error instanceof Error ? error.message : 'Delete failed; file was kept.'); return; }
     }
     setFiles(current => current.filter(file => file.id !== item.id || file.name !== item.name));
-    saveLocal('circux-upload-names', files.filter(file => file.id !== item.id || file.name !== item.name).map(file => file.name));
+    if (!supabaseConfigured) saveLocal('circux-upload-names', files.filter(file => file.id !== item.id || file.name !== item.name).map(file => file.name));
     setMessage(`${item.name} deleted.`);
   };
 

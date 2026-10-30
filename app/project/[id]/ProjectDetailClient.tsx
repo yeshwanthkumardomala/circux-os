@@ -10,12 +10,18 @@ import QrCard from '../../components/QrCard';
 import DisplayActions from '../../components/DisplayActions';
 import ProjectDashboard from '../../components/ProjectDashboard';
 import GlobalProjectSearch from '../../components/GlobalProjectSearch';
+import { supabase, supabaseConfigured } from '../../../lib/supabase-browser';
 
 export default function ProjectDetailClient({ id, initialProject }: { id: string; initialProject: Project | null }) {
   const [project, setProject] = useState<Project | null>(initialProject);
   const [loaded, setLoaded] = useState(Boolean(initialProject));
 
   useEffect(() => {
+    if (supabaseConfigured && supabase) {
+      void supabase.from('projects').select('id,name,data,is_public').eq('id', id).eq('is_public', true).eq('is_archived', false).maybeSingle()
+        .then(({ data, error }) => { setProject(error || !data ? null : { ...(data.data as Project), id: data.id, name: data.name }); setLoaded(true); });
+      return;
+    }
     relayFetch(`/projects/${encodeURIComponent(id)}`).then(async response => {
       if (response.status === 404) {
         const issue = await response.json().catch(() => null);

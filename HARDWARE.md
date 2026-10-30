@@ -20,7 +20,7 @@ The adapter must provide:
 - `GET /readings` → `{ "readings": [{ "label": "Temperature", "value": "24.8 C", "note": "sensor" }] }`
 - `POST /command` with `{ "action": "wake" | "restart" | "power-off" }` → a JSON result
 
-For Arduino boards connected by USB to a working laptop, use the included serial agent. The board should emit one JSON object per line and remain in sensor-only/read-only mode:
+For Arduino boards connected by USB to the local computer, the Board Health panel can detect CLI/ports, compile sketches, and upload only to a detected port. Sketch folders must be direct child folders of `CIRCUX_SKETCH_DIR` and contain an `.ino` file. The board should emit one JSON object per line for telemetry and remain in sensor-only/read-only mode:
 
 ```powershell
 python backend/agent.py --port COM6 --board-id CX-104-BOARD-1 --token DEVICE_TOKEN --api http://MAIN-COMPUTER-IP:8000
@@ -32,7 +32,9 @@ Example serial line:
 {"readings":[{"label":"Temperature","value":24.8,"unit":"C"}],"temperature":31.2,"voltage":5.0}
 ```
 
-The agent sends a heartbeat every five seconds and rejects non-array readings. It does not send actuator commands.
+The agent sends a heartbeat every five seconds. Reading labels, values, units, notes, and serial line lengths are bounded and validated. It does not send actuator commands. Arduino upload can restart a board; disconnect actuators and use reviewed firmware.
+
+Authenticated local endpoints are `/api/hardware/health`, `/api/hardware/compile`, and `/api/hardware/upload`. Configure `CIRCUX_SKETCH_DIR` in `.env`. The browser uses the local agent URL in Board Health; browser/network security and CORS may prevent a hosted frontend from accessing a local agent unless explicitly allowed. Prefer the local Circux app on the venue LAN.
 
 The API marks a board stale after 15 seconds without a heartbeat. Keep boards in their firmware's low-power/read-only mode during exhibition testing; Circux accepts sensor readings and sends no hardware output commands.
 
