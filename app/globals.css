@@ -324,3 +324,29 @@ button { cursor:pointer; }
   .phone-slot-actions button { min-height:44px; }
   .phone-unpair { min-height:40px; }
 }
+
+
+/* Definitive mobile workspace shell: never render the desktop rail beside a narrow content column. */
+@media screen and (max-width: 720px) {
+  html, body { width:100%; min-width:0; overflow-x:hidden; }
+  .app { display:flex !important; flex-direction:column !important; width:100%; min-width:0; min-height:100dvh; overflow-x:clip; }
+  .app > .sidebar, .app > .sidebar.sidebar-expanded, .app > .sidebar.sidebar-collapsed {
+    display:flex !important; position:relative !important; inset:auto !important; width:100% !important; min-width:0 !important; max-width:100% !important; height:auto !important; min-height:58px !important; max-height:none !important; flex:0 0 auto !important; flex-direction:row !important; align-items:center !important; justify-content:flex-start !important; gap:10px !important; padding:10px 14px !important; margin:0 !important; overflow:visible !important; z-index:50;
+  }
+  .app > .sidebar .brand, .app > .sidebar.sidebar-collapsed .brand { display:flex !important; flex:0 0 auto !important; flex-wrap:nowrap !important; align-items:center !important; width:auto !important; padding:0 !important; margin:0 !important; }
+  .app > .sidebar .brand-name, .app > .sidebar.sidebar-collapsed .brand-name { display:block !important; }
+  .app > .sidebar .nav-label, .app > .sidebar .sidebar-foot { display:none !important; }
+  .app > .sidebar .nav-item { display:none !important; }
+  .app > .sidebar.sidebar-expanded { flex-wrap:wrap !important; align-items:center !important; }
+  .app > .sidebar.sidebar-expanded .nav-item { display:flex !important; flex:1 1 calc(50% - 8px) !important; width:auto !important; min-width:0 !important; min-height:44px; justify-content:flex-start !important; padding:11px 12px !important; margin:0 !important; white-space:normal !important; }
+  .app > .sidebar.sidebar-expanded .nav-item span { display:inline !important; }
+  .app > .sidebar.sidebar-expanded .brand { flex:1 0 100% !important; }
+  .app > .main { display:block !important; width:100% !important; min-width:0 !important; max-width:100% !important; flex:1 1 auto !important; }
+  .app > .main > .topbar { width:100% !important; min-width:0 !important; max-width:100% !important; }
+  .app > .main > .content { width:100% !important; min-width:0 !important; max-width:100% !important; padding:18px 14px 34px !important; }
+  .app .page-head, .app .card, .app .grid, .app .split, .app .builder { min-width:0; max-width:100%; }
+}
+@media screen and (max-width: 380px) {
+  .app > .main > .content { padding-left:11px !important; padding-right:11px !important; }
+  .app > .sidebar.sidebar-expanded .nav-item { flex-basis:100% !important; }
+}
