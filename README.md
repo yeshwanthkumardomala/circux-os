@@ -48,6 +48,21 @@ The following preview is captured from the public Vercel deployment. It may refr
 
 > Mobile UI note: saved project readings are labelled as reference data. Live telemetry and physical controls stay unavailable until a verified hardware adapter is configured. A global project search is available from the workspace header.
 
+## 📚 Operations and documentation
+
+| Guide | Purpose |
+| --- | --- |
+| [User and Administrator Guide](docs/USER_AND_ADMIN_GUIDE.md) | Roles, sign-in, projects, global search, uploads, judging, display pairing and local hardware |
+| [Deployment, Recovery and Rollback Runbook](docs/DEPLOYMENT_RECOVERY_AND_ROLLBACK.md) | Release procedure, Vercel rollback, Supabase recovery and incident response |
+| [Production Completion Checklist](docs/PRODUCTION_COMPLETION_CHECKLIST.md) | Evidence-based release gates and outstanding validation |
+| [Release Record — 30 October 2026](docs/RELEASE_2026-10-30.md) | Deployment and CI history |
+
+### Live deployment screenshot
+
+The image below is a live-rendered preview of the production URL (not a manually captured browser test or proof of authenticated workflows). Refresh the README to view the current deployment.
+
+![Circux OS production website preview](https://image.thum.io/get/width/1440/crop/1000/noanimate/https://circux-os.vercel.app/)
+
 ## ✦ Core Features
 
 | Feature | What it does |
