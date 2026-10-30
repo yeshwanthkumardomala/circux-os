@@ -35,9 +35,6 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
-      - name: TypeScript check
-        run: npm run typecheck
-
       - name: Global search coverage regression test
         run: npm run test:search
 
@@ -49,6 +46,9 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: TypeScript check
+        run: npm run typecheck
 
       - name: Set up Python
         uses: actions/setup-python@v5
